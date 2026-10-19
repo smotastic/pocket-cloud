@@ -16,7 +16,7 @@
 - [ ] Reverse proxy (Caddy) with readable hostnames, e.g. `git.home.lan`
 - [ ] Local DNS for those hostnames (router or a small DNS service)
 - [ ] Remote access from outside the LAN (Tailscale)
-- [ ] Backup script for `DATA_ROOT`, plus an off-machine copy, and a tested restore
+- [ ] Backups: script + daily launchd job done (`scripts/backup.sh`, restic); pending: external disk, `init`, `install-backup.sh`, password in password manager
 - [x] Start the Colima VM at login (`scripts/install-autostart.sh`); containers restart via `restart: unless-stopped`
 - [ ] Decide on FileVault vs. unattended recovery after power loss
 - [ ] Monitoring and uptime checks
@@ -29,5 +29,7 @@
 
 ## Own apps
 
+- [ ] Deploy the pocket-factory bookmarks blueprint from `stacks/bookmarks`, as proof that own
+      apps can be deployed from this repo (Gitea issue #2)
 - [ ] Home automation: own repo, image built by Gitea Actions, deployed from `stacks/homeautomation`.
       Check device discovery (mDNS/multicast) works through the Colima VM early.

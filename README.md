@@ -18,8 +18,8 @@ and no runtime data (that lives under `DATA_ROOT`, outside this repo).
 compose.yaml          # entry point, includes every stack
 mise.toml             # sets DOCKER_CONTEXT inside this repo
 AGENTS.md             # rules for coding agents (CLAUDE.md links here)
-launchd/              # launchd agent template for the Colima VM
-scripts/              # install-autostart.sh
+launchd/              # launchd agent templates (Colima VM, daily backup)
+scripts/              # install-autostart.sh, backup.sh, install-backup.sh
 .env.example          # copy to .env; DATA_ROOT, domains, ports
 stacks/
   gitea/              # Git hosting
@@ -89,6 +89,33 @@ docker compose logs -f gitea         # follow one service
 docker compose pull && docker compose up -d   # apply image updates after bumping tags
 docker compose down                  # stop everything (data stays in DATA_ROOT)
 ```
+
+## Backups
+
+[`scripts/backup.sh`](scripts/backup.sh) snapshots `DATA_ROOT` with
+[restic](https://restic.net) (installed by the `setup` repo). Gitea and the runner
+are stopped for the few seconds the snapshot takes, so the SQLite database and the
+git repositories are consistent. The runner's cache is excluded. Old snapshots are
+pruned to 7 daily, 4 weekly and 12 monthly; the repository is checked every Sunday.
+
+```sh
+# once: set RESTIC_REPOSITORY in .env (e.g. on an external disk), then
+scripts/backup.sh init            # creates the password file and the repository
+scripts/install-backup.sh         # run daily at 03:30 via launchd
+
+scripts/backup.sh run             # back up now
+scripts/backup.sh snapshots       # list snapshots
+scripts/backup.sh restore-test    # restore latest to a temp dir, check SQLite + git fsck
+scripts/install-backup.sh status  # agent state and the end of the log
+```
+
+The restic password is in `~/.config/pocket-cloud/restic-password`. **Keep a copy
+in a password manager**: without it, the backups can't be restored. Logs go to
+`~/Library/Logs/pocket-cloud/backup.log`.
+
+To restore everything: `docker compose down`, move `DATA_ROOT` aside, then
+`restic restore latest --target /` (restic stores the absolute path), and
+`docker compose up -d`.
 
 ## Conventions
 
