@@ -1,0 +1,30 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2.0.22
+    container_name: mosquitto
+    restart: unless-stopped
+    environment:
+      MOSQUITTO_GATEWAY_USER: ${MOSQUITTO_GATEWAY_USER}
+      MOSQUITTO_GATEWAY_PASSWORD: ${MOSQUITTO_GATEWAY_PASSWORD}
+      MOSQUITTO_INGESTOR_USER: ${MOSQUITTO_INGESTOR_USER}
+      MOSQUITTO_INGESTOR_PASSWORD: ${MOSQUITTO_INGESTOR_PASSWORD}
+    # Rebuild the password file from .env on every start, so .env is the only place
+    # users are managed. mosquitto_passwd stores salted hashes, never the passwords.
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        f=/mosquitto/config/passwd
+        rm -f "$$f"
+        mosquitto_passwd -c -b "$$f" "$$MOSQUITTO_GATEWAY_USER" "$$MOSQUITTO_GATEWAY_PASSWORD"
+        mosquitto_passwd -b "$$f" "$$MOSQUITTO_INGESTOR_USER" "$$MOSQUITTO_INGESTOR_PASSWORD"
+        chown mosquitto:mosquitto "$$f" /mosquitto/data
+        chmod 0700 "$$f"
+        exec mosquitto -c /mosquitto/mosquitto.conf
+    volumes:
+      - ./mosquitto.conf:/mosquitto/mosquitto.conf:ro
+      - ${DATA_ROOT}/mosquitto/config:/mosquitto/config
+      - ${DATA_ROOT}/mosquitto/data:/mosquitto/data
+    ports:
+      # Plain MQTT on the LAN for the Shelly BLU Gateway and the pocket-home ingestor.
+      - ${MOSQUITTO_PORT}:1883

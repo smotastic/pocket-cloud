@@ -27,6 +27,7 @@ stacks/
   observability/      # Grafana + Prometheus (OTLP metrics)
   bookmarks/          # pocket-factory bookmarks blueprint (proof of concept)
   docmost/            # Docmost household wiki
+  mosquitto/          # MQTT broker for pocket-home
 ```
 
 ## Prerequisites
@@ -74,7 +75,7 @@ All `docker compose` commands below assume the context is set.
 ```sh
 cp .env.example .env            # adjust if needed
 source .env && mkdir -p "$DATA_ROOT"/gitea/{data,config} "$DATA_ROOT"/observability/{grafana,prometheus} \
-  "$DATA_ROOT"/docmost/{storage,postgres}
+  "$DATA_ROOT"/docmost/{storage,postgres} "$DATA_ROOT"/mosquitto/{config,data}
 docker compose up -d
 ```
 

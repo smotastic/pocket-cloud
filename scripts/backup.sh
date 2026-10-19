@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Back up DATA_ROOT with restic. Gitea, its runner and the Postgres-backed stacks
-# (bookmarks, Docmost) are stopped while the snapshot is taken, so the SQLite
+# (bookmarks, Docmost) and Mosquitto are stopped while the snapshot is taken, so the SQLite
 # database matches the git repositories and the Postgres data directories are
 # consistent with the files next to them.
 set -euo pipefail
@@ -18,7 +18,7 @@ export RESTIC_REPOSITORY="${RESTIC_REPOSITORY:-}"
 export RESTIC_PASSWORD_FILE="${RESTIC_PASSWORD_FILE:-$HOME/.config/pocket-cloud/restic-password}"
 
 # Stopped for the snapshot and started again afterwards, in this order.
-SERVICES=(gitea-runner gitea bookmarks-server bookmarks-postgres docmost docmost-postgres)
+SERVICES=(gitea-runner gitea bookmarks-server bookmarks-postgres docmost docmost-postgres mosquitto)
 EXCLUDES=(
   "$DATA_ROOT/gitea-runner/data/cache"
   # Metrics are high-churn and low-value; Grafana's DB next to it is kept.
