@@ -16,6 +16,8 @@ docker compose logs -f <service>
 
 Agent shells and scripts do not load `mise.toml`. Set `DOCKER_CONTEXT` explicitly, or run
 `mise exec -- docker compose ...`. Scripts in `scripts/` that call Docker must export it themselves.
+A set `DOCKER_HOST` overrides `DOCKER_CONTEXT` and points at the dev VM; agent shells may have it.
+Run `unset DOCKER_HOST` first, or pass `docker --context colima-pocket-cloud ...`.
 
 Never run `colima stop`, `colima delete` or `docker compose down -v` on the `pocket-cloud` profile
 without asking; it takes every service down.
