@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Back up DATA_ROOT with restic. Gitea, its runner and the bookmarks database are
-# stopped while the snapshot is taken, so the SQLite database matches the git
-# repositories and the Postgres data directory is consistent.
+# Back up DATA_ROOT with restic. Gitea, its runner and the Postgres-backed stacks
+# (bookmarks, Docmost) are stopped while the snapshot is taken, so the SQLite
+# database matches the git repositories and the Postgres data directories are
+# consistent with the files next to them.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -17,7 +18,7 @@ export RESTIC_REPOSITORY="${RESTIC_REPOSITORY:-}"
 export RESTIC_PASSWORD_FILE="${RESTIC_PASSWORD_FILE:-$HOME/.config/pocket-cloud/restic-password}"
 
 # Stopped for the snapshot and started again afterwards, in this order.
-SERVICES=(gitea-runner gitea bookmarks-server bookmarks-postgres)
+SERVICES=(gitea-runner gitea bookmarks-server bookmarks-postgres docmost docmost-postgres)
 EXCLUDES=(
   "$DATA_ROOT/gitea-runner/data/cache"
   # Metrics are high-churn and low-value; Grafana's DB next to it is kept.
@@ -134,9 +135,10 @@ run() {
 
 restore_test() {
   require_repository
-  # Global, so the EXIT trap can still see it after the function returns.
-  RESTORE_TARGET="$(mktemp -d "${TMPDIR:-/tmp}/pocket-cloud-restore.XXXXXX")"
-  trap 'rm -rf "$RESTORE_TARGET"' EXIT
+  # Below $HOME, which Colima mounts, so a container can start on the restored
+  # Postgres data. Global, so the EXIT trap can still see it after the function returns.
+  RESTORE_TARGET="$(mktemp -d "$HOME/.pocket-cloud-restore.XXXXXX")"
+  trap 'docker rm -f docmost-restore-test >/dev/null 2>&1; rm -rf "$RESTORE_TARGET"' EXIT
   local target="$RESTORE_TARGET"
 
   log "Restoring latest snapshot to $target"
@@ -152,6 +154,26 @@ restore_test() {
     count=$((count + 1))
   done < <(find "$restored/gitea/data/git/repositories" -mindepth 2 -maxdepth 2 -type d -name '*.git')
   log "git fsck passed for $count repositories"
+
+  if [[ ! -d "$restored/docmost/storage" ]]; then
+    echo "Docmost storage folder missing from the snapshot." >&2
+    exit 1
+  fi
+  # Start a throwaway Postgres (same image as the stack) on the restored data directory.
+  local image pages=""
+  image="$(sed -n 's/^ *image: *\(postgres:.*\)$/\1/p' stacks/docmost/compose.yaml)"
+  docker run -d --name docmost-restore-test \
+    -v "$restored/docmost/postgres:/var/lib/postgresql" "$image" >/dev/null
+  for _ in {1..30}; do
+    pages="$(docker exec docmost-restore-test psql -U docmost -d docmost -tAc 'SELECT count(*) FROM pages' 2>/dev/null)" && break
+    sleep 1
+  done
+  if [[ -z "$pages" ]]; then
+    docker logs docmost-restore-test >&2
+    echo "Restored Docmost database did not start." >&2
+    exit 1
+  fi
+  log "Docmost database starts, $pages pages"
   log "Restore test done"
 }
 

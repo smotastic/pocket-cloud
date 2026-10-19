@@ -11,3 +11,5 @@ include:
     env_file: .env
   - path: stacks/bookmarks/compose.yaml
     env_file: .env
+  - path: stacks/docmost/compose.yaml
+    env_file: .env
