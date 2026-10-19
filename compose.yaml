@@ -5,3 +5,5 @@ name: pocket-cloud
 include:
   - path: stacks/gitea/compose.yaml
     env_file: .env
+  - path: stacks/gitea-runner/compose.yaml
+    env_file: .env

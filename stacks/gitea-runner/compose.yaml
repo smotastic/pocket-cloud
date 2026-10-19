@@ -1,0 +1,26 @@
+services:
+  gitea-runner:
+    image: docker.gitea.com/act_runner:5.1.1
+    container_name: gitea-runner
+    restart: unless-stopped
+    depends_on:
+      - gitea
+    # Render config.yaml from the template (fills in GITEA_DOMAIN), then start the stock entrypoint.
+    entrypoint:
+      - sh
+      - -c
+      - sed "s/@GITEA_DOMAIN@/$$GITEA_DOMAIN/g" /config/config.yaml.tpl > /data/config.yaml && exec /sbin/tini -- run.sh
+    environment:
+      CONFIG_FILE: /data/config.yaml
+      GITEA_DOMAIN: ${GITEA_DOMAIN}
+      GITEA_INSTANCE_URL: http://${GITEA_DOMAIN}:${GITEA_HTTP_PORT}/
+      # Only used for the first registration; afterwards /data/.runner holds the credentials.
+      GITEA_RUNNER_REGISTRATION_TOKEN: ${GITEA_RUNNER_REGISTRATION_TOKEN}
+      GITEA_RUNNER_NAME: pocket-cloud
+    extra_hosts:
+      - ${GITEA_DOMAIN}:host-gateway
+    volumes:
+      - ./config.yaml.tpl:/config/config.yaml.tpl:ro
+      - ${DATA_ROOT}/gitea-runner/data:/data
+      # The VM's Docker daemon. Jobs run as sibling containers on it.
+      - /var/run/docker.sock:/var/run/docker.sock
