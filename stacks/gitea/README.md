@@ -13,10 +13,20 @@ Self-hosted Git server, using the rootless image and SQLite.
 
 1. `docker compose up -d gitea` from the repo root.
 2. Open the web UI. The install page is pre-filled from the environment in
-   `compose.yaml`. Leave the database on SQLite.
+   `compose.yaml`. Leave the database on SQLite with the default path
+   `/var/lib/gitea/data/gitea.db` (a container path; it lands in
+   `${DATA_ROOT}/gitea/data/data/`).
 3. Under *Administrator Account Settings*, create your admin user. Public
    registration is disabled, so this is the only way in.
 4. Click *Install Gitea*. The result is written to `config/app.ini`.
+5. The installer leaves `SECRET_KEY` empty, which makes Gitea fall back to a
+   publicly known default. Set one before enabling 2FA or Actions secrets:
+
+   ```sh
+   docker exec gitea gitea generate secret SECRET_KEY
+   # paste into [security] SECRET_KEY in config/app.ini, then:
+   docker compose restart gitea
+   ```
 
 Settings set via `GITEA__section__KEY` environment variables in `compose.yaml`
 override `app.ini` on every start, so keep durable changes there.
