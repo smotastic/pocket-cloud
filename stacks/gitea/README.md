@@ -68,3 +68,8 @@ repo with *Contents: read and write* (plus *Workflows: read and write* if it has
 Settings → Push Mirror*, enter `https://github.com/<owner>/<repo>.git`, the GitHub
 username and the token, and tick *Sync when commits are pushed*. From then on,
 push only to Gitea.
+
+Tick *Sync when commits are pushed* before clicking *Add Push Mirror*: an existing
+mirror can't be switched to it later (the API only adds, deletes and syncs), so
+delete and re-add it. Check with `tea api '/repos/<owner>/<repo>/push_mirrors'`
+(`sync_on_commit`), and trigger a sync with `tea api -X POST '/repos/<owner>/<repo>/push_mirrors-sync'`.
