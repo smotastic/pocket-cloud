@@ -1,0 +1,57 @@
+services:
+  bookmarks-postgres:
+    image: postgres:17.11-alpine
+    container_name: bookmarks-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bookmarks
+      POSTGRES_DB: bookmarks
+      # Only applied when Postgres initialises an empty data directory.
+      POSTGRES_PASSWORD: ${BOOKMARKS_DB_PASSWORD}
+    volumes:
+      - ${DATA_ROOT}/bookmarks/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U bookmarks -d bookmarks]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # One-shot: applies pending migrations on every `up`, then exits.
+  bookmarks-migrate:
+    image: ${GITEA_REGISTRY}/smotastic/bookmarks-server:${BOOKMARKS_VERSION}
+    container_name: bookmarks-migrate
+    restart: "no"
+    command: [node, --enable-source-maps, dist/migrate.js]
+    environment:
+      DATABASE_URL: postgres://bookmarks:${BOOKMARKS_DB_PASSWORD}@bookmarks-postgres:5432/bookmarks
+    depends_on:
+      bookmarks-postgres:
+        condition: service_healthy
+
+  bookmarks-server:
+    image: ${GITEA_REGISTRY}/smotastic/bookmarks-server:${BOOKMARKS_VERSION}
+    container_name: bookmarks-server
+    restart: unless-stopped
+    environment:
+      PORT: "3000"
+      DATABASE_URL: postgres://bookmarks:${BOOKMARKS_DB_PASSWORD}@bookmarks-postgres:5432/bookmarks
+      OTEL_SERVICE_NAME: bookmarks
+      OTEL_RESOURCE_ATTRIBUTES: service.version=${BOOKMARKS_VERSION},deployment.environment.name=production
+    depends_on:
+      bookmarks-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://localhost:3000/health/ready').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # nginx: serves the web app and proxies /api, /docs and /health to the server.
+  bookmarks-web:
+    image: ${GITEA_REGISTRY}/smotastic/bookmarks-web:${BOOKMARKS_VERSION}
+    container_name: bookmarks-web
+    restart: unless-stopped
+    depends_on:
+      - bookmarks-server
+    ports:
+      - ${BOOKMARKS_HTTP_PORT}:8080

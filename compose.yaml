@@ -9,3 +9,5 @@ include:
     env_file: .env
   - path: stacks/observability/compose.yaml
     env_file: .env
+  - path: stacks/bookmarks/compose.yaml
+    env_file: .env

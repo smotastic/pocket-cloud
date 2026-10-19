@@ -81,3 +81,26 @@ Tick *Sync when commits are pushed* before clicking *Add Push Mirror*: an existi
 mirror can't be switched to it later (the API only adds, deletes and syncs), so
 delete and re-add it. Check with `tea api '/repos/<owner>/<repo>/push_mirrors'`
 (`sync_on_commit`), and trigger a sync with `tea api -X POST '/repos/<owner>/<repo>/push_mirrors-sync'`.
+
+## Container registry
+
+Gitea's built-in registry (packages are on by default) holds the images of own apps.
+They are built and pushed by Gitea Actions and pulled by the stacks here, e.g.
+[`../bookmarks/`](../bookmarks/README.md). Images are named
+`localhost:3000/<owner>/<image>:<version>`; `GITEA_REGISTRY` in `.env` holds the host part.
+
+The registry is plain HTTP. Docker trusts `localhost` without TLS, and both the
+runner's jobs and the stacks use the pocket-cloud VM's daemon, where Gitea's port
+is published on `localhost`. Any other hostname would need `insecure-registries`
+in the Colima config.
+
+Packages are private, so the pocket-cloud daemon needs a login once. Create a
+token under *Settings → Applications* with only the *package: read* scope, then:
+
+```sh
+docker --context colima-pocket-cloud login localhost:3000 -u <user>   # paste the token
+```
+
+The Docker client on the Mac stores the credentials in `~/.docker/config.json`
+(base64, i.e. plain text) unless a credential helper such as `osxkeychain` is set
+as `credsStore`. They are never in this repo. Packages show up under the owner's *Packages* tab.

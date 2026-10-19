@@ -25,6 +25,7 @@ stacks/
   gitea/              # Git hosting
   gitea-runner/       # Gitea Actions runner
   observability/      # Grafana + Prometheus (OTLP metrics)
+  bookmarks/          # pocket-factory bookmarks blueprint (proof of concept)
 ```
 
 ## Prerequisites
