@@ -13,3 +13,5 @@ include:
     env_file: .env
   - path: stacks/docmost/compose.yaml
     env_file: .env
+  - path: stacks/mosquitto/compose.yaml
+    env_file: .env
