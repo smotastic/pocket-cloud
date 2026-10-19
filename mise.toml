@@ -1,0 +1,4 @@
+# Loaded by mise when you cd into this repo (requires `mise activate` in the shell).
+# Points docker and docker compose at the pocket-cloud Colima VM, not the dev VM.
+[env]
+DOCKER_CONTEXT = "colima-pocket-cloud"

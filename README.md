@@ -16,6 +16,8 @@ and no runtime data (that lives under `DATA_ROOT`, outside this repo).
 
 ```text
 compose.yaml          # entry point, includes every stack
+mise.toml             # sets DOCKER_CONTEXT inside this repo
+AGENTS.md             # rules for coding agents (CLAUDE.md links here)
 launchd/              # launchd agent template for the Colima VM
 scripts/              # install-autostart.sh
 .env.example          # copy to .env; DATA_ROOT, domains, ports
@@ -52,14 +54,17 @@ Colima mounts `$HOME` into the VM, so `DATA_ROOT` must be somewhere below it
 ### Docker context
 
 The VM is started with `--activate=false`, so it never becomes the default
-Docker context. Point Docker at it explicitly in every shell that manages
-pocket-cloud:
+Docker context. [`mise.toml`](mise.toml) sets `DOCKER_CONTEXT=colima-pocket-cloud`
+whenever a shell is inside this repo (needs `mise activate zsh`, done by the
+`setup` repo's `.zshrc`). Trust the file once after cloning:
 
 ```sh
-export DOCKER_CONTEXT=colima-pocket-cloud
+mise trust
 ```
 
-All `docker compose` commands below assume this is set.
+Non-interactive shells (scripts, cron, agents) don't load it; there, use
+`export DOCKER_CONTEXT=colima-pocket-cloud` or `mise exec -- docker compose ...`.
+All `docker compose` commands below assume the context is set.
 
 ## First start
 
