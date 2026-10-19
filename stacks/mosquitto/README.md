@@ -31,7 +31,7 @@ salted hashes only. To add, rename or change a user, edit `.env` and run
 
 1. In `.env`, choose the two user names and generate the passwords with
    `openssl rand -hex 24`.
-2. `mkdir -p "$DATA_ROOT"/mosquitto/{config,data}`, then
+2. `source .env && mkdir -p "$DATA_ROOT"/mosquitto/{config,data}`, then
    `docker compose up -d mosquitto` from the repo root.
 3. Test from the Mac (needs `brew install mosquitto` for the clients):
 
