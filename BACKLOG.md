@@ -5,7 +5,8 @@
 - [x] Verify Gitea is reachable from other devices on the LAN (Colima port forwarding)
 - [x] Push this repo to Gitea and set up a push mirror back to GitHub
 - [x] Move `pocket-factory` into Gitea (push mirror to GitHub, GitHub Actions off, `master` protected in Gitea). `setup` stays on GitHub.
-- [ ] Move `pocket-galaxy` into Gitea: pushed with all branches, remote switched; still open: push mirror to GitHub, GitHub Actions off, `master` protected in Gitea
+- [x] Move `pocket-galaxy` into Gitea (all branches copied, push mirror to GitHub, GitHub Actions off)
+- [ ] Protect `master` of `pocket-galaxy` in Gitea
 - [x] Gitea Actions runner (`stacks/gitea-runner`)
 - [ ] pocket-factory CI green on Gitea (branch `docs/gitea-workflow`, in progress)
 - [ ] Use Gitea's container registry for images of own apps
