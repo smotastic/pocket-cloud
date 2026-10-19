@@ -45,10 +45,11 @@ on every `up` is safe.
 
 ## Metrics
 
-`OTEL_SERVICE_NAME` and `OTEL_RESOURCE_ATTRIBUTES` are set (see
-[`../observability/README.md`](../observability/README.md)). The server exports
-nothing until `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` is added, once
-smotastic/pocket-factory#4 has shipped in an image.
+The server pushes metrics over OTLP to Prometheus (`OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`,
+see [`../observability/README.md`](../observability/README.md)). Traces and logs
+stay off: no endpoint is set for them. In Grafana, `{job="bookmarks"}` shows
+`http_server_request_duration_seconds` per route, with the labels `service_version`
+and `deployment_environment_name`.
 
 ## Backup
 

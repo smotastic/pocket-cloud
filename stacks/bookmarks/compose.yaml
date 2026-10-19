@@ -35,6 +35,8 @@ services:
     environment:
       PORT: "3000"
       DATABASE_URL: postgres://bookmarks:${BOOKMARKS_DB_PASSWORD}@bookmarks-postgres:5432/bookmarks
+      # Metrics only: Prometheus accepts no traces or logs.
+      OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: http://prometheus:9090/api/v1/otlp/v1/metrics
       OTEL_SERVICE_NAME: bookmarks
       OTEL_RESOURCE_ATTRIBUTES: service.version=${BOOKMARKS_VERSION},deployment.environment.name=production
     depends_on:
