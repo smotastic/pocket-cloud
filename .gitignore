@@ -1,0 +1,8 @@
+# Local configuration and secrets — copy from .env.example
+.env
+*.local
+
+# Runtime data never lives here; see DATA_ROOT
+data/
+
+.DS_Store

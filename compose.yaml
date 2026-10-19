@@ -1,0 +1,7 @@
+# Entry point: `docker compose up -d` from the repo root starts every stack.
+# Each stack lives in stacks/<name>/compose.yaml and is added to this list.
+name: pocket-cloud
+
+include:
+  - path: stacks/gitea/compose.yaml
+    env_file: .env
