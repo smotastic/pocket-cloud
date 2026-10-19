@@ -8,7 +8,7 @@
 - [x] Move `pocket-galaxy` into Gitea (all branches copied, push mirror to GitHub, GitHub Actions off)
 - [ ] Protect `master` of `pocket-galaxy` in Gitea
 - [x] Gitea Actions runner (`stacks/gitea-runner`)
-- [ ] pocket-factory CI green on Gitea (branch `docs/gitea-workflow`, in progress)
+- [x] pocket-factory CI green on Gitea (PR #1, push and PR runs)
 - [ ] Use Gitea's container registry for images of own apps
 
 ## Platform
