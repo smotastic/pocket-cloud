@@ -34,4 +34,6 @@ without asking; it takes every service down.
 - Commit subjects are conventional commits: `<type>(optional-scope): <description>`, imperative,
   lowercase, no trailing period. Types: `feat` `fix` `refactor` `docs` `ci` `build` `chore`.
   Scope is the stack or area, e.g. `feat(gitea): add actions runner`, `chore(gitea): bump to 28.2.1`.
+- `origin` is Gitea. Gitea push-mirrors to GitHub (`github` remote) on every push.
+  Push only to `origin`; never push to `github` directly, the mirror overwrites it.
 - Never force-push `main` or rewrite pushed history.

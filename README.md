@@ -76,6 +76,11 @@ docker compose up -d
 
 Then follow the per-stack notes, e.g. [`stacks/gitea/README.md`](stacks/gitea/README.md).
 
+## Git remotes
+
+This repo lives in Gitea (`origin`) and is push-mirrored to GitHub on every push.
+Push only to Gitea; see [`stacks/gitea/README.md`](stacks/gitea/README.md).
+
 ## Day-to-day
 
 ```sh

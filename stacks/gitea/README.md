@@ -33,13 +33,38 @@ override `app.ini` on every start, so keep durable changes there.
 
 ## SSH access
 
-Add to `~/.ssh/config` so plain `git@localhost:` URLs work without the port:
+Add a key under *Settings → SSH / GPG Keys*, then add to `~/.ssh/config`
+(on other devices, use the Mac's hostname instead of `localhost`):
 
 ```text
 Host gitea
   HostName localhost
   Port 2222
   User git
+  IdentityFile ~/.ssh/<your-gitea-key>
+  IdentitiesOnly yes
 ```
 
-Then clone with `git clone gitea:<owner>/<repo>.git`.
+Then clone with `git clone gitea:<owner>/<repo>.git`. `ssh gitea` should greet
+you by username.
+
+## Moving a repo in from GitHub
+
+Push-to-create is enabled, so no repo needs to be created in the UI first:
+
+```sh
+git remote rename origin github
+git remote add origin gitea:<owner>/<repo>.git
+git push -u origin main     # creates the repo (private)
+git push origin --tags
+```
+
+The very first push into a new repo can fail with `Unable to access repository
+path` although the repo was created; push again.
+
+Then mirror it back to GitHub: create a fine-grained GitHub token for just that
+repo with *Contents: read and write* (plus *Workflows: read and write* if it has
+`.github/workflows/`). In Gitea, open the repo's *Settings → Repository → Mirror
+Settings → Push Mirror*, enter `https://github.com/<owner>/<repo>.git`, the GitHub
+username and the token, and tick *Sync when commits are pushed*. From then on,
+push only to Gitea.
