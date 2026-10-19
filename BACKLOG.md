@@ -4,8 +4,9 @@
 
 - [x] Verify Gitea is reachable from other devices on the LAN (Colima port forwarding)
 - [x] Push this repo to Gitea and set up a push mirror back to GitHub
-- [ ] Mirror the other repos (`setup`, `pocket-factory`) into Gitea
-- [ ] Gitea Actions runner (CI for own apps)
+- [x] Move `pocket-factory` into Gitea (push mirror to GitHub, GitHub Actions off, `master` protected in Gitea). `setup` stays on GitHub.
+- [x] Gitea Actions runner (`stacks/gitea-runner`)
+- [ ] pocket-factory CI green on Gitea (branch `docs/gitea-workflow`, in progress)
 - [ ] Use Gitea's container registry for images of own apps
 
 ## Platform
