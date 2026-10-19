@@ -59,6 +59,14 @@ git push -u origin main     # creates the repo (private)
 git push origin --tags
 ```
 
+The push mirror runs `git push --mirror`, so it deletes every GitHub branch that
+does not exist in Gitea. Copy them all over before setting it up:
+
+```sh
+git remote set-head github -d    # or the glob also pushes a branch named HEAD
+git push origin 'refs/remotes/github/*:refs/heads/*'
+```
+
 The very first push into a new repo can fail with `Unable to access repository
 path` although the repo was created; push again.
 
