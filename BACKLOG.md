@@ -14,7 +14,8 @@
 - [ ] Local DNS for those hostnames (router or a small DNS service)
 - [ ] Remote access from outside the LAN (Tailscale)
 - [ ] Backup script for `DATA_ROOT`, plus an off-machine copy, and a tested restore
-- [ ] Start Colima and the stack automatically after reboot or power loss
+- [x] Start the Colima VM at login (`scripts/install-autostart.sh`); containers restart via `restart: unless-stopped`
+- [ ] Decide on FileVault vs. unattended recovery after power loss
 - [ ] Monitoring and uptime checks
 
 ## Services

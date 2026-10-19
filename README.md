@@ -16,6 +16,8 @@ and no runtime data (that lives under `DATA_ROOT`, outside this repo).
 
 ```text
 compose.yaml          # entry point, includes every stack
+launchd/              # launchd agent template for the Colima VM
+scripts/              # install-autostart.sh
 .env.example          # copy to .env; DATA_ROOT, domains, ports
 stacks/
   gitea/              # Git hosting
@@ -24,15 +26,40 @@ BACKLOG.md            # planned services and open tasks
 
 ## Prerequisites
 
-Containers run in a Linux VM managed by [Colima](https://github.com/abiosoft/colima):
+Containers run in a Linux VM managed by [Colima](https://github.com/abiosoft/colima)
+(installed by the `setup` repo). pocket-cloud uses its own Colima profile,
+`pocket-cloud`, separate from the `default` profile used for development, so
+stopping or resetting the dev VM never takes the services down.
 
 ```sh
-brew install colima docker docker-compose
-colima start --vm-type vz --mount-type virtiofs --cpu 4 --memory 8
+scripts/install-autostart.sh          # create the VM and start it at every login
+scripts/install-autostart.sh status   # agent and VM state
+scripts/install-autostart.sh uninstall
 ```
+
+The script creates the profile (4 CPUs, 8 GiB RAM, vz + virtiofs) on first run and
+installs the launchd agent `dev.pocket-cloud.colima`, which runs
+`colima start pocket-cloud --foreground` at login and restarts it if it stops.
+Logs go to `~/Library/Logs/pocket-cloud/colima.log`. Run over SSH without a
+desktop session, it starts the VM directly; the agent then loads at the next login.
+
+Autostart after a reboot requires a login. With FileVault on, that happens when
+the disk is unlocked; use `sudo fdesetup authrestart` for planned restarts.
 
 Colima mounts `$HOME` into the VM, so `DATA_ROOT` must be somewhere below it
 (or the Colima mount list has to be extended).
+
+### Docker context
+
+The VM is started with `--activate=false`, so it never becomes the default
+Docker context. Point Docker at it explicitly in every shell that manages
+pocket-cloud:
+
+```sh
+export DOCKER_CONTEXT=colima-pocket-cloud
+```
+
+All `docker compose` commands below assume this is set.
 
 ## First start
 

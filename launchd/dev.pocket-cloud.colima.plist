@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Template. scripts/install-autostart.sh replaces the __PLACEHOLDERS__ and
+  installs the result to ~/Library/LaunchAgents/. Do not load this file directly.
+-->
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>dev.pocket-cloud.colima</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>__COLIMA__</string>
+		<string>start</string>
+		<string>__PROFILE__</string>
+		<string>--foreground</string>
+		<!-- Keep the user's current Docker context (dev VM) untouched. -->
+		<string>--activate=false</string>
+	</array>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>__BREW_PREFIX__/bin:__BREW_PREFIX__/sbin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+	</dict>
+	<key>WorkingDirectory</key>
+	<string>__HOME__</string>
+	<!-- Start at login, and bring the VM back if it exits or is stopped. -->
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<true/>
+	<key>ThrottleInterval</key>
+	<integer>30</integer>
+	<key>StandardOutPath</key>
+	<string>__HOME__/Library/Logs/pocket-cloud/colima.log</string>
+	<key>StandardErrorPath</key>
+	<string>__HOME__/Library/Logs/pocket-cloud/colima.log</string>
+</dict>
+</plist>
