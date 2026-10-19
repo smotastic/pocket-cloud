@@ -17,7 +17,11 @@ export RESTIC_PASSWORD_FILE="${RESTIC_PASSWORD_FILE:-$HOME/.config/pocket-cloud/
 
 # Stopped for the snapshot and started again afterwards, in this order.
 SERVICES=(gitea-runner gitea)
-EXCLUDES=("$DATA_ROOT/gitea-runner/data/cache")
+EXCLUDES=(
+  "$DATA_ROOT/gitea-runner/data/cache"
+  # Metrics are high-churn and low-value; Grafana's DB next to it is kept.
+  "$DATA_ROOT/observability/prometheus"
+)
 KEEP=(--keep-daily 7 --keep-weekly 4 --keep-monthly 12)
 TAG=pocket-cloud
 

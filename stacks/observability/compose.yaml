@@ -1,0 +1,33 @@
+services:
+  prometheus:
+    image: prom/prometheus:v3.15.0
+    container_name: prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      # Services push metrics over OTLP/HTTP to /api/v1/otlp/v1/metrics.
+      - --web.enable-otlp-receiver
+      - --storage.tsdb.retention.time=30d
+      - --storage.tsdb.retention.size=5GB
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ${DATA_ROOT}/observability/prometheus:/prometheus
+    ports:
+      - ${PROMETHEUS_PORT}:9090
+
+  grafana:
+    image: grafana/grafana:13.2.3
+    container_name: grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      # Only applied when Grafana creates its database on the first start.
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ${DATA_ROOT}/observability/grafana:/var/lib/grafana
+    ports:
+      - ${GRAFANA_HTTP_PORT}:3000

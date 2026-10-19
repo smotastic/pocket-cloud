@@ -23,6 +23,8 @@ scripts/              # install-autostart.sh, backup.sh, install-backup.sh
 .env.example          # copy to .env; DATA_ROOT, domains, ports
 stacks/
   gitea/              # Git hosting
+  gitea-runner/       # Gitea Actions runner
+  observability/      # Grafana + Prometheus (OTLP metrics)
 ```
 
 ## Prerequisites
@@ -69,7 +71,7 @@ All `docker compose` commands below assume the context is set.
 
 ```sh
 cp .env.example .env            # adjust if needed
-source .env && mkdir -p "$DATA_ROOT"/gitea/{data,config}
+source .env && mkdir -p "$DATA_ROOT"/gitea/{data,config} "$DATA_ROOT"/observability/{grafana,prometheus}
 docker compose up -d
 ```
 
@@ -94,8 +96,9 @@ docker compose down                  # stop everything (data stays in DATA_ROOT)
 [`scripts/backup.sh`](scripts/backup.sh) snapshots `DATA_ROOT` with
 [restic](https://restic.net) (installed by the `setup` repo). Gitea and the runner
 are stopped for the few seconds the snapshot takes, so the SQLite database and the
-git repositories are consistent. The runner's cache is excluded. Old snapshots are
-pruned to 7 daily, 4 weekly and 12 monthly; the repository is checked every Sunday.
+git repositories are consistent. The runner's cache and the Prometheus metrics
+are excluded. Old snapshots are pruned to 7 daily, 4 weekly and 12 monthly; the
+repository is checked every Sunday.
 
 ```sh
 # once: set RESTIC_REPOSITORY in .env (e.g. on an external disk), then
