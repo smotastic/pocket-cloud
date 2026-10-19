@@ -1,7 +1,7 @@
 # AGENTS.md
 
 Deployment configuration (Docker Compose on a Colima VM) for the services on the home Mac mini.
-No application source, no runtime data. See [README.md](README.md) and [BACKLOG.md](BACKLOG.md).
+No application source, no runtime data. See [README.md](README.md). Open tasks are Gitea issues.
 
 ## Commands
 
@@ -27,7 +27,8 @@ without asking; it takes every service down.
 - One folder per service in `stacks/<service>/` with its own `compose.yaml` and `README.md`,
   listed in the root `compose.yaml`. Pin images to an exact version.
 - Persistent data is a bind mount under `${DATA_ROOT}/<service>/`, never a named volume.
-- Keep `BACKLOG.md` current when a task is done or a new one comes up.
+- Track tasks as Gitea issues (`tea issues ... --login local --repo smotastic/pocket-cloud`), not in
+  Markdown files. Close the issue when the task is done (`Closes #N` in the commit); open one for new work.
 
 ## Git
 

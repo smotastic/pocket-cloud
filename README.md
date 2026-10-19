@@ -23,7 +23,6 @@ scripts/              # install-autostart.sh, backup.sh, install-backup.sh
 .env.example          # copy to .env; DATA_ROOT, domains, ports
 stacks/
   gitea/              # Git hosting
-BACKLOG.md            # planned services and open tasks
 ```
 
 ## Prerequisites
