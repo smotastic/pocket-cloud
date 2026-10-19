@@ -2,9 +2,9 @@
 
 ## Gitea follow-ups
 
-- [ ] Verify Gitea is reachable from other devices on the LAN (Colima port forwarding)
+- [x] Verify Gitea is reachable from other devices on the LAN (Colima port forwarding)
 - [ ] Push this repo to Gitea and set up a push mirror back to GitHub
-- [ ] Mirror the other repos (`setup`, `platform-template`) into Gitea
+- [ ] Mirror the other repos (`setup`, `pocket-factory`) into Gitea
 - [ ] Gitea Actions runner (CI for own apps)
 - [ ] Use Gitea's container registry for images of own apps
 
