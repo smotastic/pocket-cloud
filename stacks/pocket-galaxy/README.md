@@ -122,13 +122,13 @@ network or the tailnet). Two ways in:
 - **Tailnet**: `https://galaxy.<tailnet>.ts.net`, served by its own Tailscale node
   `tailscale-galaxy` with a Tailscale certificate (see
   [`../tailscale/README.md`](../tailscale/README.md)). Every member of the tailnet can read
-  and change every world; the tailnet policy allows them HTTPS to `tag:pocket-cloud` only.
-  No Funnel, so it is not reachable from the internet. Use this address everywhere: the
+  and change every world. No Funnel, so it is not reachable from the internet. Use this address everywhere: the
   PWA's service worker needs HTTPS, so only here can the app be installed (Add to Home
   Screen / Install app) and get its offline shell.
 - **LAN**: `pocket-galaxy-web` is also published on `POCKET_GALAXY_HTTP_PORT`, on all
-  interfaces of the Mac, over plain HTTP. Any device on the LAN can use it, but not
-  install it. The router forwards no ports.
+  interfaces of the Mac, over plain HTTP. Any device on the LAN (and, with Tailscale's
+  default policy, on the tailnet via the Mac's address) can use it, but not install it.
+  The router forwards no ports.
 
 ## Debugging
 

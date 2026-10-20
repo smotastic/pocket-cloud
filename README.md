@@ -88,9 +88,10 @@ Then follow the per-stack notes, e.g. [`stacks/gitea/README.md`](stacks/gitea/RE
 
 ## Remote access
 
-Services reach the tailnet only through their own Tailscale node in
-[`stacks/tailscale`](stacks/tailscale/README.md), over HTTPS. The Mac itself runs
-Tailscale for SSH only. Everything else is LAN-only.
+Services get a tailnet name and HTTPS through their own Tailscale node in
+[`stacks/tailscale`](stacks/tailscale/README.md). The Mac itself runs Tailscale for SSH.
+With Tailscale's default policy the tailnet also reaches the Mac's published LAN ports;
+the stack's README has a stricter policy that keeps them LAN-only.
 
 ## Git remotes
 

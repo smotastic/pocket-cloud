@@ -2,14 +2,15 @@
 
 Remote access over [Tailscale](https://tailscale.com), split in two:
 
-- **The Mac** runs the Tailscale app from Homebrew, for SSH only. It serves nothing.
+- **The Mac** runs Tailscale (Homebrew) for SSH. It serves nothing itself.
 - **Each exposed service** gets its own Tailscale node: a sidecar container in this stack
   that joins the tailnet under its own name and serves that one service over HTTPS,
   e.g. `https://galaxy.<tailnet>.ts.net`. The certificate comes from Tailscale.
 
-So the tailnet reaches exactly the services listed in [`compose.yaml`](compose.yaml), and
-nothing else the Mac publishes on its LAN ports (Prometheus, Grafana, Mosquitto, ...). No
-Funnel: nothing is reachable from the internet.
+Only the services listed in [`compose.yaml`](compose.yaml) get a tailnet name and HTTPS.
+With Tailscale's default policy, though, tailnet devices also reach everything the Mac
+publishes on its LAN ports, over the Mac's tailnet address (see [Hardening](#hardening)).
+No Funnel: nothing is reachable from the internet.
 
 | Node | Service | Serve config | Data |
 |---|---|---|---|
@@ -28,7 +29,7 @@ Funnel: nothing is reachable from the internet.
   container. Serve doesn't need it: tailscaled terminates TLS and opens the connection to
   the service itself, over the compose network. Userspace keeps the containers
   unprivileged.
-- The sidecars live in this stack, not next to each service: what the tailnet can reach
+- The sidecars live in this stack, not next to each service: what gets a tailnet name
   is one file to review, the shared settings are written once (`x-tailscale`), and the
   service stacks run without Tailscale. All stacks are included into one compose project,
   so a sidecar reaches any service by name.
@@ -38,46 +39,68 @@ Funnel: nothing is reachable from the internet.
 In the [admin console](https://login.tailscale.com/admin):
 
 1. **DNS**: enable **MagicDNS** and, below it, **HTTPS Certificates**.
-2. **Access controls**: own the tag and allow only HTTPS to it. Replace the policy's
-   `grants` (or `acls`) with something like:
+2. **Access controls**: keep Tailscale's default policy (every device reaches every other
+   one, plus its default `ssh` rule) and, in the JSON editor, add only the tag owner:
 
    ```jsonc
-   {
-     "tagOwners": {
-       "tag:pocket-cloud": ["autogroup:admin"]
-     },
-     "grants": [
-       // Every member reaches the pocket-cloud services, HTTPS only.
-       { "src": ["autogroup:member"], "dst": ["tag:pocket-cloud"], "ip": ["tcp:443"] },
-       // SSH to the owner's own devices, which includes the Mac.
-       { "src": ["autogroup:owner"], "dst": ["autogroup:self"], "ip": ["tcp:22"] }
-     ],
-     "ssh": [
-       {
-         // "check" instead asks for a browser login every 12 hours.
-         "action": "accept",
-         "src": ["autogroup:owner"],
-         "dst": ["autogroup:self"],
-         "users": ["autogroup:nonroot"]
-       }
-     ]
-   }
+   "tagOwners": {
+     "tag:pocket-cloud": ["autogroup:admin"]
+   },
    ```
 
-   `autogroup:self` is the owner's own devices, which includes the Mac as long as it is
-   logged in with the owner's account (not tagged). Tagged nodes have no SSH rule, so
-   nobody can SSH into a sidecar.
+   This is required: an auth key can only carry a tag that has an owner, and tagged nodes
+   have key expiry disabled, so the sidecars stay logged in.
 3. **Settings > Keys**: generate an auth key: **reusable**, **tags: `tag:pocket-cloud`**,
    not ephemeral (an ephemeral node disappears when its container stops). Put it into
-   `.env` as `TS_AUTHKEY`. Nodes with a tag have key expiry disabled, so they stay
-   logged in.
+   `.env` as `TS_AUTHKEY`.
 
-## The Mac (SSH only)
+With the default policy, every tailnet device reaches the sidecars and also the Mac's
+tailnet address, and with it every port the Mac publishes on the LAN: Prometheus (no
+auth, also the OTLP receiver), Grafana, Gitea, Docmost, Mosquitto, Pocket Galaxy over plain
+HTTP. That is no worse than the LAN as long as only your own devices are in the tailnet.
+The default `ssh` rule lets you SSH into your own devices (the Mac included) in `check`
+mode, which asks for a browser login every 12 hours.
 
-Set up by hand, outside this repo:
+### Hardening
+
+Once other people join the tailnet, or to keep the LAN ports off it, replace the default
+`grants` (or `acls`) and `ssh` sections with:
+
+```jsonc
+{
+  "tagOwners": {
+    "tag:pocket-cloud": ["autogroup:admin"]
+  },
+  "grants": [
+    // Every member reaches the pocket-cloud services, HTTPS only.
+    { "src": ["autogroup:member"], "dst": ["tag:pocket-cloud"], "ip": ["tcp:443"] },
+    // SSH to the owner's own devices, which includes the Mac.
+    { "src": ["autogroup:owner"], "dst": ["autogroup:self"], "ip": ["tcp:22"] }
+  ],
+  "ssh": [
+    {
+      // "check" instead asks for a browser login every 12 hours.
+      "action": "accept",
+      "src": ["autogroup:owner"],
+      "dst": ["autogroup:self"],
+      "users": ["autogroup:nonroot"]
+    }
+  ]
+}
+```
+
+`autogroup:self` is the owner's own devices, which includes the Mac as long as it is
+logged in with the owner's account (not tagged). The tailnet then reaches only the
+services listed here, the Mac's LAN ports only from the LAN. Tagged nodes have no SSH
+rule, so nobody can SSH into a sidecar, and the sidecars reach nothing in the tailnet.
+
+## The Mac (SSH)
+
+Set up by hand, outside this repo. Prerequisite, once: the `tailscale` Homebrew formula
+(the open-source tailscaled, which runs without a desktop session and supports Tailscale
+SSH; the App Store app does not).
 
 ```sh
-brew install tailscale             # the open-source tailscaled, runs without a desktop session
 sudo brew services start tailscale # starts at boot, before any login
 sudo tailscale up --ssh            # log in with your account; enables Tailscale SSH
 ```
