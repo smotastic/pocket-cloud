@@ -1,0 +1,69 @@
+services:
+  pocket-galaxy-postgres:
+    image: postgres:17.11-alpine
+    container_name: pocket-galaxy-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pocket-galaxy
+      POSTGRES_DB: pocket-galaxy
+      # Only applied when Postgres initialises an empty data directory.
+      POSTGRES_PASSWORD: ${POCKET_GALAXY_DB_PASSWORD}
+    volumes:
+      - ${DATA_ROOT}/pocket-galaxy/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U pocket-galaxy -d pocket-galaxy]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # One-shot: applies every module's pending migrations on every `up`, then exits.
+  pocket-galaxy-migrate:
+    image: ${GITEA_REGISTRY}/smotastic/pocket-galaxy-server:${POCKET_GALAXY_VERSION}
+    container_name: pocket-galaxy-migrate
+    restart: "no"
+    command: [node, --enable-source-maps, dist/migrate.js]
+    environment:
+      DATABASE_URL: postgres://pocket-galaxy:${POCKET_GALAXY_DB_PASSWORD}@pocket-galaxy-postgres:5432/pocket-galaxy
+    depends_on:
+      pocket-galaxy-postgres:
+        condition: service_healthy
+
+  pocket-galaxy-server:
+    image: ${GITEA_REGISTRY}/smotastic/pocket-galaxy-server:${POCKET_GALAXY_VERSION}
+    container_name: pocket-galaxy-server
+    restart: unless-stopped
+    # sharp decodes uploaded images in memory; a large map needs the headroom.
+    mem_limit: 1g
+    environment:
+      PORT: "3000"
+      DATABASE_URL: postgres://pocket-galaxy:${POCKET_GALAXY_DB_PASSWORD}@pocket-galaxy-postgres:5432/pocket-galaxy
+      # Uploaded images and their variants; the folder must be owned by uid 1000 (`node`).
+      ASSET_DIR: /data/assets
+      # Metrics only: Prometheus accepts no traces or logs.
+      OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: http://prometheus:9090/api/v1/otlp/v1/metrics
+      OTEL_SERVICE_NAME: pocket-galaxy
+      OTEL_RESOURCE_ATTRIBUTES: service.version=${POCKET_GALAXY_VERSION},deployment.environment.name=production
+    volumes:
+      - ${DATA_ROOT}/pocket-galaxy/assets:/data/assets
+    depends_on:
+      pocket-galaxy-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://localhost:3000/health/ready').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+  # nginx: serves the PWA and proxies /api, /docs and /health to the server.
+  pocket-galaxy-web:
+    image: ${GITEA_REGISTRY}/smotastic/pocket-galaxy-web:${POCKET_GALAXY_VERSION}
+    container_name: pocket-galaxy-web
+    restart: unless-stopped
+    environment:
+      POCKET_GALAXY_SERVER_HOST: pocket-galaxy-server
+      POCKET_GALAXY_SERVER_PORT: "3000"
+    depends_on:
+      - pocket-galaxy-server
+    ports:
+      - ${POCKET_GALAXY_HTTP_PORT}:8080

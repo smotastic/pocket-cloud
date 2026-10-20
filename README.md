@@ -28,6 +28,7 @@ stacks/
   bookmarks/          # pocket-factory bookmarks blueprint (proof of concept)
   docmost/            # Docmost household wiki
   mosquitto/          # MQTT broker for pocket-home
+  pocket-galaxy/      # Pocket Galaxy, worlds and maps for tabletop campaigns
 ```
 
 ## Prerequisites
@@ -75,7 +76,8 @@ All `docker compose` commands below assume the context is set.
 ```sh
 cp .env.example .env            # adjust if needed
 source .env && mkdir -p "$DATA_ROOT"/gitea/{data,config} "$DATA_ROOT"/observability/{grafana,prometheus} \
-  "$DATA_ROOT"/docmost/{storage,postgres} "$DATA_ROOT"/mosquitto/{config,data}
+  "$DATA_ROOT"/docmost/{storage,postgres} "$DATA_ROOT"/mosquitto/{config,data} \
+  "$DATA_ROOT"/pocket-galaxy/{postgres,assets}
 docker compose up -d
 ```
 
@@ -99,7 +101,7 @@ docker compose down                  # stop everything (data stays in DATA_ROOT)
 
 [`scripts/backup.sh`](scripts/backup.sh) snapshots `DATA_ROOT` with
 [restic](https://restic.net) (installed by the `setup` repo). Gitea, the runner and the
-Postgres-backed stacks (bookmarks, Docmost) are stopped for the few seconds the
+Postgres-backed stacks (bookmarks, Docmost, Pocket Galaxy) are stopped for the few seconds the
 snapshot takes, so the SQLite database matches the git repositories and each
 Postgres data directory is consistent. The runner's cache and the Prometheus metrics
 are excluded. Old snapshots are pruned to 7 daily, 4 weekly and 12 monthly; the
@@ -112,7 +114,7 @@ scripts/install-backup.sh         # run daily at 03:30 via launchd
 
 scripts/backup.sh run             # back up now
 scripts/backup.sh snapshots       # list snapshots
-scripts/backup.sh restore-test    # restore latest to a temp dir, check SQLite, git fsck, Docmost's Postgres
+scripts/backup.sh restore-test    # restore latest to a temp dir, check SQLite, git fsck, Docmost's and Pocket Galaxy's Postgres
 scripts/install-backup.sh status  # agent state and the end of the log
 ```
 
