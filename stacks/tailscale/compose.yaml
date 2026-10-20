@@ -1,0 +1,28 @@
+# One Tailscale node per exposed service. The tailnet reaches only what is listed here,
+# each service over HTTPS on its own name (https://<node>.<tailnet>.ts.net).
+# Adding a service: a serve/<node>.json and a service block below, see README.md.
+x-tailscale: &tailscale
+  image: tailscale/tailscale:v1.104.1
+  restart: unless-stopped
+  environment: &tailscale-env
+    # Reusable auth key tagged tag:pocket-cloud; only used for a node's first login.
+    TS_AUTHKEY: ${TS_AUTHKEY}
+    TS_AUTH_ONCE: "true"
+    TS_EXTRA_ARGS: --advertise-tags=tag:pocket-cloud
+    # Userspace networking: serve proxies to the target itself, no tun device needed.
+    TS_USERSPACE: "true"
+    TS_STATE_DIR: /var/lib/tailscale
+    TS_SERVE_CONFIG: /config/serve.json
+
+services:
+  tailscale-galaxy:
+    <<: *tailscale
+    container_name: tailscale-galaxy
+    environment:
+      <<: *tailscale-env
+      TS_HOSTNAME: galaxy
+    volumes:
+      - ${DATA_ROOT}/tailscale/galaxy:/var/lib/tailscale
+      - ./serve/galaxy.json:/config/serve.json:ro
+    depends_on:
+      - pocket-galaxy-web
