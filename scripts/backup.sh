@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Back up DATA_ROOT with restic. Gitea, its runner and the Postgres-backed stacks
-# (bookmarks, Docmost) and Mosquitto are stopped while the snapshot is taken, so the SQLite
+# (bookmarks, Docmost, Pocket Galaxy) and Mosquitto are stopped while the snapshot is taken, so the SQLite
 # database matches the git repositories and the Postgres data directories are
 # consistent with the files next to them.
 set -euo pipefail
@@ -18,7 +18,8 @@ export RESTIC_REPOSITORY="${RESTIC_REPOSITORY:-}"
 export RESTIC_PASSWORD_FILE="${RESTIC_PASSWORD_FILE:-$HOME/.config/pocket-cloud/restic-password}"
 
 # Stopped for the snapshot and started again afterwards, in this order.
-SERVICES=(gitea-runner gitea bookmarks-server bookmarks-postgres docmost docmost-postgres mosquitto)
+SERVICES=(gitea-runner gitea bookmarks-server bookmarks-postgres docmost docmost-postgres
+  pocket-galaxy-server pocket-galaxy-postgres mosquitto)
 EXCLUDES=(
   "$DATA_ROOT/gitea-runner/data/cache"
   # Metrics are high-churn and low-value; Grafana's DB next to it is kept.
@@ -138,7 +139,7 @@ restore_test() {
   # Below $HOME, which Colima mounts, so a container can start on the restored
   # Postgres data. Global, so the EXIT trap can still see it after the function returns.
   RESTORE_TARGET="$(mktemp -d "$HOME/.pocket-cloud-restore.XXXXXX")"
-  trap 'docker rm -f docmost-restore-test >/dev/null 2>&1; rm -rf "$RESTORE_TARGET"' EXIT
+  trap 'docker rm -f docmost-restore-test pocket-galaxy-restore-test >/dev/null 2>&1; rm -rf "$RESTORE_TARGET"' EXIT
   local target="$RESTORE_TARGET"
 
   log "Restoring latest snapshot to $target"
@@ -174,6 +175,28 @@ restore_test() {
     exit 1
   fi
   log "Docmost database starts, $pages pages"
+
+  if [[ ! -d "$restored/pocket-galaxy/assets" ]]; then
+    echo "Pocket Galaxy asset folder missing from the snapshot." >&2
+    exit 1
+  fi
+  # Postgres 17 keeps its data directly in /var/lib/postgresql/data.
+  local galaxy_image counts=""
+  galaxy_image="$(sed -n 's/^ *image: *\(postgres:.*\)$/\1/p' stacks/pocket-galaxy/compose.yaml)"
+  docker run -d --name pocket-galaxy-restore-test \
+    -v "$restored/pocket-galaxy/postgres:/var/lib/postgresql/data" "$galaxy_image" >/dev/null
+  for _ in {1..30}; do
+    counts="$(docker exec pocket-galaxy-restore-test psql -U pocket-galaxy -d pocket-galaxy -tAc \
+      "SELECT (SELECT count(*) FROM worlds.worlds) || ' worlds, ' || (SELECT count(*) FROM entries.entries) || ' entries'" \
+      2>/dev/null)" && break
+    sleep 1
+  done
+  if [[ -z "$counts" ]]; then
+    docker logs pocket-galaxy-restore-test >&2
+    echo "Restored Pocket Galaxy database did not start." >&2
+    exit 1
+  fi
+  log "Pocket Galaxy database starts, $counts, $(find "$restored/pocket-galaxy/assets" -type f | wc -l | tr -d ' ') asset files"
   log "Restore test done"
 }
 
