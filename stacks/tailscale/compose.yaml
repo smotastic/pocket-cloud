@@ -26,3 +26,15 @@ services:
       - ./serve/galaxy.json:/config/serve.json:ro
     depends_on:
       - pocket-galaxy-web
+
+  tailscale-docmost:
+    <<: *tailscale
+    container_name: tailscale-docmost
+    environment:
+      <<: *tailscale-env
+      TS_HOSTNAME: docmost
+    volumes:
+      - ${DATA_ROOT}/tailscale/docmost:/var/lib/tailscale
+      - ./serve/docmost.json:/config/serve.json:ro
+    depends_on:
+      - docmost
