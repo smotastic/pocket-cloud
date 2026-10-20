@@ -78,7 +78,7 @@ All `docker compose` commands below assume the context is set.
 cp .env.example .env            # adjust if needed
 source .env && mkdir -p "$DATA_ROOT"/gitea/{data,config} "$DATA_ROOT"/observability/{grafana,prometheus} \
   "$DATA_ROOT"/docmost/{storage,postgres} "$DATA_ROOT"/mosquitto/{config,data} \
-  "$DATA_ROOT"/pocket-galaxy/{postgres,assets} "$DATA_ROOT"/tailscale/galaxy
+  "$DATA_ROOT"/pocket-galaxy/{postgres,assets} "$DATA_ROOT"/tailscale/{galaxy,docmost}
 docker compose up -d
 ```
 

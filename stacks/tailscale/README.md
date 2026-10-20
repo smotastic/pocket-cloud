@@ -15,6 +15,7 @@ No Funnel: nothing is reachable from the internet.
 | Node | Service | Serve config | Data |
 |---|---|---|---|
 | `galaxy` | `pocket-galaxy-web:8080` | [`serve/galaxy.json`](serve/galaxy.json) | `${DATA_ROOT}/tailscale/galaxy` |
+| `docmost` | `docmost:3000` | [`serve/docmost.json`](serve/docmost.json) | `${DATA_ROOT}/tailscale/docmost` |
 
 ## How a sidecar works
 
@@ -122,31 +123,31 @@ first HTTPS request fetches the certificate and can take a few seconds.
 
 ## Adding a service
 
-Example: Docmost as `wiki`.
+Example: Grafana as `grafana`.
 
-1. Copy [`serve/galaxy.json`](serve/galaxy.json) to `serve/wiki.json` and set `Proxy` to
-   the container and its **internal** port: `http://docmost:3000`.
+1. Copy [`serve/galaxy.json`](serve/galaxy.json) to `serve/grafana.json` and set `Proxy` to
+   the container and its **internal** port: `http://grafana:3000`.
 2. Add a service block to [`compose.yaml`](compose.yaml):
 
    ```yaml
-     tailscale-wiki:
+     tailscale-grafana:
        <<: *tailscale
-       container_name: tailscale-wiki
+       container_name: tailscale-grafana
        environment:
          <<: *tailscale-env
-         TS_HOSTNAME: wiki
+         TS_HOSTNAME: grafana
        volumes:
-         - ${DATA_ROOT}/tailscale/wiki:/var/lib/tailscale
-         - ./serve/wiki.json:/config/serve.json:ro
+         - ${DATA_ROOT}/tailscale/grafana:/var/lib/tailscale
+         - ./serve/grafana.json:/config/serve.json:ro
        depends_on:
-         - docmost
+         - grafana
    ```
 
-3. Add the row to the table above, `mkdir -p "$DATA_ROOT"/tailscale/wiki`, then
-   `docker compose up -d tailscale-wiki`.
+3. Add the row to the table above, `mkdir -p "$DATA_ROOT"/tailscale/grafana`, then
+   `docker compose up -d tailscale-grafana`.
 4. Check the app itself: apps that build absolute links need the new address, e.g.
-   `DOCMOST_APP_URL=https://wiki.<tailnet>.ts.net` for Docmost, or Grafana's
-   `GF_SERVER_ROOT_URL`. Add a section on the access to the service's README.
+   Grafana's `GF_SERVER_ROOT_URL` or Docmost's `DOCMOST_APP_URL`. Add a section on the
+   access to the service's README.
 
 The same auth key logs in every node. If it has expired, create a new one first.
 

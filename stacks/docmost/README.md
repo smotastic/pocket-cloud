@@ -6,7 +6,7 @@ Markdown export). Chosen over BookStack, AFFiNE, Outline, AppFlowy and SiYuan in
 
 | | |
 |---|---|
-| Web UI | `DOCMOST_APP_URL`, e.g. http://\<mac-name\>.local:3003 (`DOCMOST_HTTP_PORT`) |
+| Web UI | https://docmost.\<tailnet\>.ts.net (tailnet, HTTPS), http://\<mac-name\>.local:3003 (LAN, `DOCMOST_HTTP_PORT`) |
 | Data | `${DATA_ROOT}/docmost/storage` (uploads), `${DATA_ROOT}/docmost/postgres` (PostgreSQL data directory) |
 
 | Service | Image | Role |
@@ -35,18 +35,23 @@ No mail server is configured, so invites aren't emailed. Invite the person under
 *Settings → Members*, then copy the link from the pending invite and send it by
 messenger.
 
-Do this in a browser **on the Mac mini at `http://localhost:3003`**: browsers only
-allow clipboard access over HTTPS or on `localhost`, so the copy buttons silently do
-nothing at the `.local` address. The same applies to every copy button in Docmost
-(page links, code blocks) until the wiki is served over HTTPS.
+Do this over HTTPS, at `https://docmost.<tailnet>.ts.net`, or on the Mac mini at
+`http://localhost:3003`: browsers only allow clipboard access over HTTPS or on
+`localhost`, so the copy buttons (invites, page links, code blocks) silently do nothing
+at the `.local` address.
+
+Invite links point to `DOCMOST_APP_URL`. Set it to the tailnet address only if everyone
+who uses the wiki is in the tailnet; otherwise keep the `.local` address.
 
 Without mail there is no "forgot password" either. Store the passwords in a password manager.
 
 ## Phone
 
 There is no native app. Open the URL in the phone's browser and add it to the home
-screen. It is reachable on the home Wi-Fi only; access from outside comes with
-Tailscale (#8), which only changes `DOCMOST_APP_URL`.
+screen. Use `https://docmost.<tailnet>.ts.net` on devices in the tailnet: it works from
+anywhere and over HTTPS. It is served by the Tailscale node `tailscale-docmost`, see
+[`../tailscale/README.md`](../tailscale/README.md). The `.local` address works on the
+home Wi-Fi only.
 
 ## Backup
 
