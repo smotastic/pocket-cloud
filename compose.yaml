@@ -17,3 +17,5 @@ include:
     env_file: .env
   - path: stacks/pocket-galaxy/compose.yaml
     env_file: .env
+  - path: stacks/tailscale/compose.yaml
+    env_file: .env

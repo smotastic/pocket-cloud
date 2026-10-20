@@ -29,6 +29,7 @@ stacks/
   docmost/            # Docmost household wiki
   mosquitto/          # MQTT broker for pocket-home
   pocket-galaxy/      # Pocket Galaxy, worlds and maps for tabletop campaigns
+  tailscale/          # one Tailscale node per service exposed to the tailnet (HTTPS)
 ```
 
 ## Prerequisites
@@ -77,11 +78,20 @@ All `docker compose` commands below assume the context is set.
 cp .env.example .env            # adjust if needed
 source .env && mkdir -p "$DATA_ROOT"/gitea/{data,config} "$DATA_ROOT"/observability/{grafana,prometheus} \
   "$DATA_ROOT"/docmost/{storage,postgres} "$DATA_ROOT"/mosquitto/{config,data} \
-  "$DATA_ROOT"/pocket-galaxy/{postgres,assets}
+  "$DATA_ROOT"/pocket-galaxy/{postgres,assets} "$DATA_ROOT"/tailscale/galaxy
 docker compose up -d
 ```
 
 Then follow the per-stack notes, e.g. [`stacks/gitea/README.md`](stacks/gitea/README.md).
+`TS_AUTHKEY` and the tailnet policy have to be set up first, see
+[`stacks/tailscale/README.md`](stacks/tailscale/README.md).
+
+## Remote access
+
+Services get a tailnet name and HTTPS through their own Tailscale node in
+[`stacks/tailscale`](stacks/tailscale/README.md). The Mac itself runs Tailscale for SSH.
+With Tailscale's default policy the tailnet also reaches the Mac's published LAN ports;
+the stack's README has a stricter policy that keeps them LAN-only.
 
 ## Git remotes
 

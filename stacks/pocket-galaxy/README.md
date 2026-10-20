@@ -8,8 +8,8 @@ moved from the Pi, the stack started empty.
 
 | | |
 |---|---|
-| Web app | http://\<mac-name\>.local:3004 (`POCKET_GALAXY_HTTP_PORT`) |
-| API docs | http://\<mac-name\>.local:3004/docs |
+| Web app | https://galaxy.\<tailnet\>.ts.net (tailnet, HTTPS, installable), http://\<mac-name\>.local:3004 (LAN, `POCKET_GALAXY_HTTP_PORT`) |
+| API docs | https://galaxy.\<tailnet\>.ts.net/docs |
 | Version | `POCKET_GALAXY_VERSION` in `.env`, the image tag of both images |
 | Data | `${DATA_ROOT}/pocket-galaxy/postgres` (PostgreSQL data directory), `${DATA_ROOT}/pocket-galaxy/assets` (uploaded images and their variants) |
 
@@ -41,6 +41,8 @@ moved from the Pi, the stack started empty.
 4. `docker compose up -d pocket-galaxy-web` from the repo root (pulls in its dependencies).
    The server is ready once `docker compose ps` shows it `healthy`; its readiness check
    asks the database and writes a probe file to the asset folder.
+5. For HTTPS over the tailnet, start its Tailscale node `tailscale-galaxy`
+   (see [`../tailscale/README.md`](../tailscale/README.md#first-start)).
 
 ## Updating
 
@@ -72,7 +74,7 @@ it from a pocket-galaxy checkout and point it at this stack once:
 
 ```sh
 pnpm cli:install
-pocket use --url http://<mac-name>.local:3004
+pocket use --url https://galaxy.<tailnet>.ts.net
 pocket worlds
 ```
 
@@ -115,13 +117,18 @@ files.
 ## Access
 
 The app has **no authentication** (pocket-galaxy ADR 0016: reachable only from the home
-network or the tailnet). Only `pocket-galaxy-web` is published, on all interfaces of the
-Mac, so any device on the LAN can read and change every world. Nothing is reachable from
-outside because the router forwards no ports.
+network or the tailnet). Two ways in:
 
-It is served over plain HTTP. The PWA's service worker needs HTTPS (or `localhost`), so
-the app can't be installed and has no offline shell until `tailscale serve` fronts it on
-the Mac mini, tracked in #26.
+- **Tailnet**: `https://galaxy.<tailnet>.ts.net`, served by its own Tailscale node
+  `tailscale-galaxy` with a Tailscale certificate (see
+  [`../tailscale/README.md`](../tailscale/README.md)). Every member of the tailnet can read
+  and change every world. No Funnel, so it is not reachable from the internet. Use this address everywhere: the
+  PWA's service worker needs HTTPS, so only here can the app be installed (Add to Home
+  Screen / Install app) and get its offline shell.
+- **LAN**: `pocket-galaxy-web` is also published on `POCKET_GALAXY_HTTP_PORT`, on all
+  interfaces of the Mac, over plain HTTP. Any device on the LAN (and, with Tailscale's
+  default policy, on the tailnet via the Mac's address) can use it, but not install it.
+  The router forwards no ports.
 
 ## Debugging
 
