@@ -29,13 +29,14 @@ moved from the Pi, the stack started empty.
    so it must only contain URL-safe characters. Postgres only applies the password when it
    initialises an empty data directory; to change it later, run
    `ALTER USER "pocket-galaxy" PASSWORD '...'` in `psql`, then update `.env`.
-3. Create the data folders. The server runs as uid 1000 (`node`) and must be able to write
-   the asset folder:
+3. Create the data folders:
 
    ```sh
    source .env && mkdir -p "$DATA_ROOT"/pocket-galaxy/{postgres,assets}
-   sudo chown 1000:1000 "$DATA_ROOT"/pocket-galaxy/assets
    ```
+
+   No `chown` is needed: the server runs as uid 1000 (`node`), and Colima's virtiofs mount
+   lets it write the asset folder although the folder belongs to your user on the Mac.
 
 4. `docker compose up -d pocket-galaxy-web` from the repo root (pulls in its dependencies).
    The server is ready once `docker compose ps` shows it `healthy`; its readiness check

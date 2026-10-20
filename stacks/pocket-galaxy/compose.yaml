@@ -37,7 +37,7 @@ services:
     environment:
       PORT: "3000"
       DATABASE_URL: postgres://pocket-galaxy:${POCKET_GALAXY_DB_PASSWORD}@pocket-galaxy-postgres:5432/pocket-galaxy
-      # Uploaded images and their variants; the folder must be owned by uid 1000 (`node`).
+      # Uploaded images and their variants; uid 1000 (`node`) writes them through virtiofs.
       ASSET_DIR: /data/assets
       # Metrics only: Prometheus accepts no traces or logs.
       OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: http://prometheus:9090/api/v1/otlp/v1/metrics
