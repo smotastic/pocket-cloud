@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Back up DATA_ROOT with restic. Gitea, its runner, the Postgres-backed stacks
-# (bookmarks, Docmost, Pocket Galaxy, pocket-home) and pocket-home's MQTT broker are
+# (bookmarks, Docmost, Pocket Galaxy, pocket-home, pocket-learning) and pocket-home's MQTT broker are
 # stopped while the snapshot is taken, so the SQLite
 # database matches the git repositories and the Postgres data directories are
 # consistent with the files next to them.
@@ -21,7 +21,7 @@ export RESTIC_PASSWORD_FILE="${RESTIC_PASSWORD_FILE:-$HOME/.config/pocket-cloud/
 # Stopped for the snapshot and started again afterwards, in this order.
 SERVICES=(gitea-runner gitea bookmarks-server bookmarks-postgres docmost docmost-postgres
   pocket-galaxy-server pocket-galaxy-postgres pocket-home-ingestor pocket-home-postgres
-  pocket-home-mosquitto)
+  pocket-home-mosquitto pocket-learning-server pocket-learning-postgres)
 EXCLUDES=(
   "$DATA_ROOT/gitea-runner/data/cache"
   # Metrics are high-churn and low-value; Grafana's DB next to it is kept.
@@ -141,7 +141,7 @@ restore_test() {
   # Below $HOME, which Colima mounts, so a container can start on the restored
   # Postgres data. Global, so the EXIT trap can still see it after the function returns.
   RESTORE_TARGET="$(mktemp -d "$HOME/.pocket-cloud-restore.XXXXXX")"
-  trap 'docker rm -f docmost-restore-test pocket-galaxy-restore-test >/dev/null 2>&1; rm -rf "$RESTORE_TARGET"' EXIT
+  trap 'docker rm -f docmost-restore-test pocket-galaxy-restore-test pocket-learning-restore-test >/dev/null 2>&1; rm -rf "$RESTORE_TARGET"' EXIT
   local target="$RESTORE_TARGET"
 
   log "Restoring latest snapshot to $target"
@@ -199,6 +199,23 @@ restore_test() {
     exit 1
   fi
   log "Pocket Galaxy database starts, $counts, $(find "$restored/pocket-galaxy/assets" -type f | wc -l | tr -d ' ') asset files"
+
+  local learning_image learning_counts=""
+  learning_image="$(sed -n 's/^ *image: *\(postgres:.*\)$/\1/p' stacks/pocket-learning/compose.yaml)"
+  docker run -d --name pocket-learning-restore-test \
+    -v "$restored/pocket-learning/postgres:/var/lib/postgresql/data" "$learning_image" >/dev/null
+  for _ in {1..30}; do
+    learning_counts="$(docker exec pocket-learning-restore-test psql -U pocket-learning -d pocket-learning -tAc \
+      "SELECT (SELECT count(*) FROM learning.cards) || ' cards, ' || (SELECT count(*) FROM learning.reviews) || ' reviews'" \
+      2>/dev/null)" && break
+    sleep 1
+  done
+  if [[ -z "$learning_counts" ]]; then
+    docker logs pocket-learning-restore-test >&2
+    echo "Restored pocket-learning database did not start." >&2
+    exit 1
+  fi
+  log "pocket-learning database starts, $learning_counts"
   log "Restore test done"
 }
 

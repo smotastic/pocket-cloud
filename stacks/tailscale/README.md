@@ -16,6 +16,7 @@ No Funnel: nothing is reachable from the internet.
 |---|---|---|---|
 | `galaxy` | `pocket-galaxy-web:8080` | [`serve/galaxy.json`](serve/galaxy.json) | `${DATA_ROOT}/tailscale/galaxy` |
 | `docmost` | `docmost:3000` | [`serve/docmost.json`](serve/docmost.json) | `${DATA_ROOT}/tailscale/docmost` |
+| `learning` | `pocket-learning-web:8080` | [`serve/learning.json`](serve/learning.json) | `${DATA_ROOT}/tailscale/learning` |
 
 ## How a sidecar works
 
@@ -57,7 +58,7 @@ In the [admin console](https://login.tailscale.com/admin):
 
 With the default policy, every tailnet device reaches the sidecars and also the Mac's
 tailnet address, and with it every port the Mac publishes on the LAN: Prometheus (no
-auth, also the OTLP receiver), Grafana, Gitea, Docmost, Pocket Galaxy, pocket-home over
+auth, also the OTLP receiver), Grafana, Gitea, Docmost, Pocket Galaxy, pocket-learning, pocket-home over
 plain HTTP and its MQTT broker over plain TCP. That is no worse than the LAN as long as only your own devices are in the tailnet.
 The default `ssh` rule lets you SSH into your own devices (the Mac included) in `check`
 mode, which asks for a browser login every 12 hours.
