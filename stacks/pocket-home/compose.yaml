@@ -1,0 +1,113 @@
+services:
+  pocket-home-mosquitto:
+    image: eclipse-mosquitto:2.0.22
+    container_name: pocket-home-mosquitto
+    restart: unless-stopped
+    environment:
+      POCKET_HOME_MQTT_GATEWAY_USER: ${POCKET_HOME_MQTT_GATEWAY_USER}
+      POCKET_HOME_MQTT_GATEWAY_PASSWORD: ${POCKET_HOME_MQTT_GATEWAY_PASSWORD}
+      POCKET_HOME_MQTT_INGESTOR_USER: ${POCKET_HOME_MQTT_INGESTOR_USER}
+      POCKET_HOME_MQTT_INGESTOR_PASSWORD: ${POCKET_HOME_MQTT_INGESTOR_PASSWORD}
+    # Rebuild the password file from .env on every start, so .env is the only place
+    # users are managed. mosquitto_passwd stores salted hashes, never the passwords.
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        f=/mosquitto/config/passwd
+        rm -f "$$f"
+        mosquitto_passwd -c -b "$$f" "$$POCKET_HOME_MQTT_GATEWAY_USER" "$$POCKET_HOME_MQTT_GATEWAY_PASSWORD"
+        mosquitto_passwd -b "$$f" "$$POCKET_HOME_MQTT_INGESTOR_USER" "$$POCKET_HOME_MQTT_INGESTOR_PASSWORD"
+        chown mosquitto:mosquitto "$$f" /mosquitto/data
+        chmod 0700 "$$f"
+        exec mosquitto -c /mosquitto/mosquitto.conf
+    volumes:
+      - ./mosquitto.conf:/mosquitto/mosquitto.conf:ro
+      - ${DATA_ROOT}/pocket-home/mosquitto/config:/mosquitto/config
+      - ${DATA_ROOT}/pocket-home/mosquitto/data:/mosquitto/data
+    ports:
+      # Plain MQTT on the LAN for the Shelly BLU Gateway; the ingestor connects over the
+      # container network.
+      - ${POCKET_HOME_MQTT_PORT}:1883
+
+  # The services below need pocket-home's first release (ingestor-v*, home-web-v*). Until
+  # then they sit in the `pocket-home` profile, so a plain `docker compose up -d` skips them.
+  pocket-home-postgres:
+    image: postgres:17.11-alpine
+    container_name: pocket-home-postgres
+    restart: unless-stopped
+    profiles: [pocket-home]
+    environment:
+      POSTGRES_USER: pocket-home
+      POSTGRES_DB: pocket-home
+      # Only applied when Postgres initialises an empty data directory.
+      POSTGRES_PASSWORD: ${POCKET_HOME_DB_PASSWORD}
+    volumes:
+      - ${DATA_ROOT}/pocket-home/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U pocket-home -d pocket-home]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # One-shot: applies pending migrations on every `up`, then exits.
+  pocket-home-migrate:
+    image: ${GITEA_REGISTRY}/smotastic/ingestor:${POCKET_HOME_INGESTOR_VERSION}
+    container_name: pocket-home-migrate
+    restart: "no"
+    profiles: [pocket-home]
+    command: [node, --enable-source-maps, dist/migrate.js]
+    environment:
+      DATABASE_URL: postgres://pocket-home:${POCKET_HOME_DB_PASSWORD}@pocket-home-postgres:5432/pocket-home
+    depends_on:
+      pocket-home-postgres:
+        condition: service_healthy
+
+  # One instance only: the broker keeps its persistent session under one client id.
+  pocket-home-ingestor:
+    image: ${GITEA_REGISTRY}/smotastic/ingestor:${POCKET_HOME_INGESTOR_VERSION}
+    container_name: pocket-home-ingestor
+    restart: unless-stopped
+    profiles: [pocket-home]
+    environment:
+      PORT: "3000"
+      DATABASE_URL: postgres://pocket-home:${POCKET_HOME_DB_PASSWORD}@pocket-home-postgres:5432/pocket-home
+      MQTT_URL: mqtt://pocket-home-mosquitto:1883
+      MQTT_USERNAME: ${POCKET_HOME_MQTT_INGESTOR_USER}
+      MQTT_PASSWORD: ${POCKET_HOME_MQTT_INGESTOR_PASSWORD}
+      API_TOKEN: ${POCKET_HOME_API_TOKEN}
+      # The web app is plain HTTP on the LAN; a secure cookie would be dropped by browsers.
+      API_COOKIE_SECURE: "false"
+      # Empty means unset: notifications and history retention stay off.
+      TELEGRAM_BOT_TOKEN: ${POCKET_HOME_TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${POCKET_HOME_TELEGRAM_CHAT_ID:-}
+      HISTORY_RETENTION_DAYS: ${POCKET_HOME_HISTORY_RETENTION_DAYS:-}
+      # Metrics only: Prometheus accepts no traces or logs. The service name stays the
+      # default `ingestor-server`, the job pocket-home's dashboard and alerts expect.
+      OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: http://prometheus:9090/api/v1/otlp/v1/metrics
+      OTEL_RESOURCE_ATTRIBUTES: service.version=${POCKET_HOME_INGESTOR_VERSION},deployment.environment.name=production
+    depends_on:
+      pocket-home-migrate:
+        condition: service_completed_successfully
+      pocket-home-mosquitto:
+        condition: service_started
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://localhost:3000/health/ready').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+  # nginx: serves the web app and proxies /api, /docs and /health to the ingestor.
+  pocket-home-web:
+    image: ${GITEA_REGISTRY}/smotastic/home-web:${POCKET_HOME_WEB_VERSION}
+    container_name: pocket-home-web
+    restart: unless-stopped
+    profiles: [pocket-home]
+    environment:
+      INGESTOR_HOST: pocket-home-ingestor
+      INGESTOR_PORT: "3000"
+    depends_on:
+      - pocket-home-ingestor
+    ports:
+      - ${POCKET_HOME_HTTP_PORT}:8080
