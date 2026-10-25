@@ -38,3 +38,15 @@ services:
       - ./serve/docmost.json:/config/serve.json:ro
     depends_on:
       - docmost
+
+  tailscale-learning:
+    <<: *tailscale
+    container_name: tailscale-learning
+    environment:
+      <<: *tailscale-env
+      TS_HOSTNAME: learning
+    volumes:
+      - ${DATA_ROOT}/tailscale/learning:/var/lib/tailscale
+      - ./serve/learning.json:/config/serve.json:ro
+    depends_on:
+      - pocket-learning-web

@@ -29,6 +29,7 @@ stacks/
   docmost/            # Docmost household wiki
   pocket-galaxy/      # Pocket Galaxy, worlds and maps for tabletop campaigns
   pocket-home/        # pocket-home: Shelly BLU ingestor, web app and MQTT broker
+  pocket-learning/    # pocket-learning: flashcards with spaced review
   tailscale/          # one Tailscale node per service exposed to the tailnet (HTTPS)
 ```
 
@@ -78,7 +79,8 @@ All `docker compose` commands below assume the context is set.
 cp .env.example .env            # adjust if needed
 source .env && mkdir -p "$DATA_ROOT"/gitea/{data,config} "$DATA_ROOT"/observability/{grafana,prometheus} \
   "$DATA_ROOT"/docmost/{storage,postgres} "$DATA_ROOT"/pocket-galaxy/{postgres,assets} \
-  "$DATA_ROOT"/pocket-home/{mosquitto/config,mosquitto/data,postgres} "$DATA_ROOT"/tailscale/{galaxy,docmost}
+  "$DATA_ROOT"/pocket-home/{mosquitto/config,mosquitto/data,postgres} "$DATA_ROOT"/pocket-learning/postgres \
+  "$DATA_ROOT"/tailscale/{galaxy,docmost,learning}
 docker compose up -d
 ```
 
@@ -111,7 +113,7 @@ docker compose down                  # stop everything (data stays in DATA_ROOT)
 
 [`scripts/backup.sh`](scripts/backup.sh) snapshots `DATA_ROOT` with
 [restic](https://restic.net) (installed by the `setup` repo). Gitea, the runner and the
-Postgres-backed stacks (bookmarks, Docmost, Pocket Galaxy) are stopped for the few seconds the
+Postgres-backed stacks (bookmarks, Docmost, Pocket Galaxy, pocket-home, pocket-learning) are stopped for the few seconds the
 snapshot takes, so the SQLite database matches the git repositories and each
 Postgres data directory is consistent. The runner's cache and the Prometheus metrics
 are excluded. Old snapshots are pruned to 7 daily, 4 weekly and 12 monthly; the
@@ -124,7 +126,7 @@ scripts/install-backup.sh         # run daily at 03:30 via launchd
 
 scripts/backup.sh run             # back up now
 scripts/backup.sh snapshots       # list snapshots
-scripts/backup.sh restore-test    # restore latest to a temp dir, check SQLite, git fsck, Docmost's and Pocket Galaxy's Postgres
+scripts/backup.sh restore-test    # restore latest to a temp dir, check SQLite, git fsck, Docmost's, Pocket Galaxy's and pocket-learning's Postgres
 scripts/install-backup.sh status  # agent state and the end of the log
 ```
 
