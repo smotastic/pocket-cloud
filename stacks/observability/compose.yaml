@@ -16,6 +16,30 @@ services:
     ports:
       - ${PROMETHEUS_PORT}:9090
 
+  # Per-container CPU and memory of the Colima VM, scraped by Prometheus.
+  # Sees the VM's cgroups, not the Mac itself.
+  cadvisor:
+    image: ghcr.io/google/cadvisor:v0.60.6
+    container_name: cadvisor
+    restart: unless-stopped
+    privileged: true
+    devices:
+      - /dev/kmsg
+    command:
+      - --docker_only=true
+      - --housekeeping_interval=30s
+      - --enable_metrics=cpu,memory,oom_event
+      # Keep only the compose service label instead of every container label.
+      - --store_container_labels=false
+      - --whitelisted_container_labels=com.docker.compose.service
+    # Host paths inside the Colima VM, read-only.
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+
   grafana:
     image: grafana/grafana:13.2.3
     container_name: grafana

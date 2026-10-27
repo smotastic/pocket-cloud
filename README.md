@@ -24,7 +24,7 @@ scripts/              # install-autostart.sh, backup.sh, install-backup.sh
 stacks/
   gitea/              # Git hosting
   gitea-runner/       # Gitea Actions runner
-  observability/      # Grafana + Prometheus (OTLP metrics)
+  observability/      # Grafana + Prometheus (OTLP metrics) + cAdvisor
   bookmarks/          # pocket-factory bookmarks blueprint (proof of concept)
   docmost/            # Docmost household wiki
   pocket-galaxy/      # Pocket Galaxy, worlds and maps for tabletop campaigns
