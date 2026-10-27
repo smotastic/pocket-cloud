@@ -1,7 +1,8 @@
 # observability
 
-Shared metrics stack: Prometheus receives metrics from every service over OTLP,
-Grafana shows them. Metrics only; there are no traces or logs (no Tempo, no Loki).
+Shared metrics stack: Prometheus receives metrics from every service over OTLP
+and scrapes per-container CPU and memory from cAdvisor; Grafana shows them.
+Metrics only; there are no traces or logs (no Tempo, no Loki).
 
 | | |
 |---|---|
@@ -10,7 +11,7 @@ Grafana shows them. Metrics only; there are no traces or logs (no Tempo, no Loki
 | OTLP metrics | `http://prometheus:9090/api/v1/otlp/v1/metrics` (OTLP/HTTP only, no gRPC) |
 | Data | `${DATA_ROOT}/observability/grafana` (Grafana DB), `${DATA_ROOT}/observability/prometheus` (TSDB) |
 
-Idle memory is about 0.5 GiB together, nearly all of it Grafana.
+Idle memory is about 0.8 GiB together, nearly all of it Grafana.
 
 ## First run
 
@@ -20,8 +21,32 @@ Idle memory is about 0.5 GiB together, nearly all of it Grafana.
 2. `mkdir -p "$DATA_ROOT"/observability/{grafana,prometheus}`, then
    `docker compose up -d prometheus grafana` from the repo root.
 
-Anonymous access is off. The Prometheus data source is provisioned from
-[`grafana/provisioning/`](grafana/provisioning/) and can't be edited in the UI.
+Anonymous access is off. The Prometheus data source and the dashboards are
+provisioned from [`grafana/provisioning/`](grafana/provisioning/) and can't be
+edited in the UI.
+
+## Dashboards
+
+Every `*.json` in [`grafana/provisioning/dashboards/`](grafana/provisioning/dashboards/)
+appears in the *pocket-cloud* folder; Grafana rescans it every 60 s. To change one,
+edit a copy in the UI (*Save as*), export it as JSON and replace the file.
+
+| Dashboard | Shows |
+|---|---|
+| Container memory | Working set per app and per container, memory limits, OOM kills, VM total |
+
+An *app* is the container name up to the first dash, two words for `pocket-*`:
+`bookmarks-server` → `bookmarks`, `pocket-galaxy-web` → `pocket-galaxy`. New stacks
+show up without changes as long as their containers follow that naming.
+
+## Container metrics (cAdvisor)
+
+cAdvisor runs privileged with read-only mounts of the Colima VM's `/`, `/sys` and
+`/var/lib/docker`, so it sees the VM (8 GiB), not the Mac. Prometheus scrapes it at
+`cadvisor:8080` (not published). Only CPU, memory and OOM metrics are collected, and
+the only container label kept is `com.docker.compose.service`, to keep cardinality low.
+Memory panels use `container_memory_working_set_bytes`, the same number `docker stats`
+shows.
 
 ## Sending metrics from a service
 
@@ -76,5 +101,6 @@ revisit this before exposing the Mac via Tailscale.
 
 ```sh
 docker compose logs -f prometheus      # OTLP ingest errors show up here
-docker compose logs -f grafana
+docker compose logs -f grafana         # dashboard provisioning errors show up here
+docker compose logs -f cadvisor
 ```

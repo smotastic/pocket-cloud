@@ -1,0 +1,12 @@
+apiVersion: 1
+
+# Loads every *.json next to this file. Edits in the UI can't be saved;
+# change the JSON and restart Grafana (or wait for the 60 s rescan).
+providers:
+  - name: pocket-cloud
+    folder: pocket-cloud
+    type: file
+    allowUiUpdates: false
+    updateIntervalSeconds: 60
+    options:
+      path: /etc/grafana/provisioning/dashboards
