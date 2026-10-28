@@ -1,23 +1,25 @@
 # pocket-learning
 
 [pocket-learning](https://github.com/smotastic/pocket-learning): flashcards with spaced review,
-starting with Tulu. A web app for review, a REST API and the `learn` CLI the teaching agent uses
-to write cards. Its images are built from the repository's Dockerfiles and pulled from Gitea's
+starting with Tulu. A web app for review and lessons with the learning coach, a REST API, the
+coach API, and the `learn` CLI the teaching agent uses to write cards. Its images are built from the repository's Dockerfiles and pulled from Gitea's
 container registry.
 
 | | |
 |---|---|
 | Web app | https://learning.\<tailnet\>.ts.net (tailnet, HTTPS), http://\<mac-name\>.local:3006 (LAN, `POCKET_LEARNING_HTTP_PORT`) |
 | API docs | https://learning.\<tailnet\>.ts.net/docs |
-| Version | `POCKET_LEARNING_VERSION` in `.env`, the image tag of both images |
+| Version | `POCKET_LEARNING_VERSION` in `.env`, the image tag of all three images |
 | Data | `${DATA_ROOT}/pocket-learning/postgres` (PostgreSQL data directory) |
 
 | Service | Image | Role |
 |---|---|---|
-| `pocket-learning-web` | `learning-web` | nginx: serves the web app, proxies `/api`, `/docs`, `/health` to the server. The only published port. |
+| `pocket-learning-web` | `learning-web` | nginx: serves the web app, proxies `/api`, `/docs`, `/health` to the server and `/api/v1/coach` to the coach. The only published port. |
 | `pocket-learning-server` | `learning-server` | REST API on port 3000, internal only. |
 | `pocket-learning-migrate` | `learning-server` | Runs the migrations on every `up`, then exits. The server starts only after it succeeds. |
-| `pocket-learning-postgres` | `postgres` | Database, schema `learning`. Internal only. |
+| `pocket-learning-coach` | `coach-server` | The learning coach's API on port 3000, internal only. Calls the model with the owner's Pi login. |
+| `pocket-learning-coach-migrate` | `coach-server` | Runs the coach's migrations on every `up`, then exits. The coach starts only after it succeeds. |
+| `pocket-learning-postgres` | `postgres` | Database, schemas `learning` and `coach`. Internal only. |
 
 ## First run
 
@@ -39,10 +41,11 @@ container registry.
 5. For HTTPS over the tailnet, start its Tailscale node `tailscale-learning`
    (see [`../tailscale/README.md`](../tailscale/README.md#first-start)).
 6. Import the old flashcards once, see [below](#flashcards-import).
+7. Set up the coach, see [below](#the-learning-coach).
 
 ## Updating
 
-A release in pocket-learning is a git tag `learning-vX.Y.Z`, which builds and pushes both
+A release in pocket-learning is a git tag `learning-vX.Y.Z`, which builds and pushes all three
 images as `X.Y.Z`. To deploy it, set `POCKET_LEARNING_VERSION=X.Y.Z` in `.env` and run:
 
 ```sh
@@ -70,6 +73,32 @@ source .env && docker compose run --rm --no-deps \
 ```
 
 Running it again adds nothing.
+
+## The learning coach
+
+Lessons with the teaching agent, in the web app under "Lessons with the coach". The coach
+writes cards only through the server's API, after the learner approves each write.
+
+- **Model:** `POCKET_LEARNING_COACH_PROVIDER`, `POCKET_LEARNING_COACH_MODEL` and
+  `POCKET_LEARNING_COACH_THINKING` in `.env`, from Pi's model catalog.
+- **Credentials:** the owner's Pi login. Sign in on the host with `pi`, then `/login`, and set
+  `POCKET_LEARNING_PI_AGENT_DIR` to Pi's agent directory (it must be below `$HOME`). The
+  directory is mounted read-write: the coach refreshes an expired login and writes it back
+  under Pi's lock, so the Pi CLI and the coach share one login. `POCKET_LEARNING_COACH_API_KEY`
+  is an optional key instead.
+- Without a model or credentials the coach stops at start-up and its logs name the setting;
+  review keeps working.
+
+The coach's memory (goal, family wording, material not carded yet, sources, next step) is
+imported once from a reviewed Markdown file, mounted read-only from below `$HOME`:
+
+```sh
+source .env && docker compose run --rm --no-deps \
+  -v <folder with the memory file>:/import:ro \
+  pocket-learning-coach-migrate node --enable-source-maps dist/import-memory.js tulu /import/<file>
+```
+
+Running it again with the same text adds nothing.
 
 ## The `learn` CLI
 
@@ -107,6 +136,8 @@ anyone who can reach `/api/v1/teacher` can change cards.
 
 ```sh
 docker compose logs pocket-learning-migrate        # migration output of the last `up`
+docker compose logs pocket-learning-coach-migrate  # the coach's migration output
 docker compose logs -f pocket-learning-server
+docker compose logs -f pocket-learning-coach
 docker compose exec pocket-learning-postgres psql -U pocket-learning
 ```

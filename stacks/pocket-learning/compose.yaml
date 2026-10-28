@@ -49,7 +49,51 @@ services:
       start_period: 30s
       retries: 3
 
-  # nginx: serves the web app and proxies /api, /docs and /health to the server.
+  # One-shot: applies the coach's pending migrations (schema `coach`) on every `up`, then exits.
+  pocket-learning-coach-migrate:
+    image: ${GITEA_REGISTRY}/smotastic/coach-server:${POCKET_LEARNING_VERSION}
+    container_name: pocket-learning-coach-migrate
+    restart: "no"
+    command: [node, --enable-source-maps, dist/migrate.js]
+    environment:
+      DATABASE_URL: postgres://pocket-learning:${POCKET_LEARNING_DB_PASSWORD}@pocket-learning-postgres:5432/pocket-learning
+    depends_on:
+      pocket-learning-postgres:
+        condition: service_healthy
+
+  # The learning coach: lessons with the teaching agent. It reads and writes cards only through
+  # the server's API, and calls the model with the owner's Pi login, refreshed in place.
+  pocket-learning-coach:
+    image: ${GITEA_REGISTRY}/smotastic/coach-server:${POCKET_LEARNING_VERSION}
+    container_name: pocket-learning-coach
+    restart: unless-stopped
+    environment:
+      PORT: "3000"
+      DATABASE_URL: postgres://pocket-learning:${POCKET_LEARNING_DB_PASSWORD}@pocket-learning-postgres:5432/pocket-learning
+      LEARNING_API_URL: http://pocket-learning-server:3000
+      COACH_PROVIDER: ${POCKET_LEARNING_COACH_PROVIDER}
+      COACH_MODEL: ${POCKET_LEARNING_COACH_MODEL}
+      COACH_THINKING: ${POCKET_LEARNING_COACH_THINKING:-off}
+      # Empty: the Pi login below is used.
+      COACH_API_KEY: ${POCKET_LEARNING_COACH_API_KEY:-}
+      COACH_PI_AUTH_FILE: /pi/auth.json
+    volumes:
+      # Pi's agent directory, read and written: the coach refreshes the login under Pi's lock.
+      - ${POCKET_LEARNING_PI_AGENT_DIR}:/pi
+    depends_on:
+      pocket-learning-coach-migrate:
+        condition: service_completed_successfully
+      pocket-learning-server:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://localhost:3000/health/ready').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+  # nginx: serves the web app and proxies /api, /docs and /health to the server, /api/v1/coach
+  # to the coach.
   pocket-learning-web:
     image: ${GITEA_REGISTRY}/smotastic/learning-web:${POCKET_LEARNING_VERSION}
     container_name: pocket-learning-web
@@ -57,7 +101,14 @@ services:
     environment:
       LEARNING_SERVER_HOST: pocket-learning-server
       LEARNING_SERVER_PORT: "3000"
+      COACH_SERVER_HOST: pocket-learning-coach
+      COACH_SERVER_PORT: "3000"
     depends_on:
-      - pocket-learning-server
+      pocket-learning-server:
+        condition: service_started
+      # Started with the web app, but review keeps working while the coach is down.
+      pocket-learning-coach:
+        condition: service_started
+        required: false
     ports:
       - ${POCKET_LEARNING_HTTP_PORT}:8080
