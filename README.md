@@ -24,7 +24,7 @@ scripts/              # install-autostart.sh, backup.sh, install-backup.sh
 stacks/
   gitea/              # Git hosting
   gitea-runner/       # Gitea Actions runner
-  observability/      # Grafana + Prometheus (OTLP metrics) + cAdvisor
+  observability/      # Grafana + Prometheus (OTLP metrics) + cAdvisor + Loki/Alloy (logs)
   bookmarks/          # pocket-factory bookmarks blueprint (proof of concept)
   docmost/            # Docmost household wiki
   pocket-galaxy/      # Pocket Galaxy, worlds and maps for tabletop campaigns
@@ -77,7 +77,7 @@ All `docker compose` commands below assume the context is set.
 
 ```sh
 cp .env.example .env            # adjust if needed
-source .env && mkdir -p "$DATA_ROOT"/gitea/{data,config} "$DATA_ROOT"/observability/{grafana,prometheus} \
+source .env && mkdir -p "$DATA_ROOT"/gitea/{data,config} "$DATA_ROOT"/observability/{grafana,prometheus,loki,alloy} \
   "$DATA_ROOT"/docmost/{storage,postgres} "$DATA_ROOT"/pocket-galaxy/{postgres,assets} \
   "$DATA_ROOT"/pocket-home/{mosquitto/config,mosquitto/data,postgres} "$DATA_ROOT"/pocket-learning/postgres \
   "$DATA_ROOT"/tailscale/{galaxy,docmost,learning}
@@ -115,7 +115,7 @@ docker compose down                  # stop everything (data stays in DATA_ROOT)
 [restic](https://restic.net) (installed by the `setup` repo). Gitea, the runner and the
 Postgres-backed stacks (bookmarks, Docmost, Pocket Galaxy, pocket-home, pocket-learning) are stopped for the few seconds the
 snapshot takes, so the SQLite database matches the git repositories and each
-Postgres data directory is consistent. The runner's cache and the Prometheus metrics
+Postgres data directory is consistent. The runner's cache, the Prometheus metrics and the Loki logs
 are excluded. Old snapshots are pruned to 7 daily, 4 weekly and 12 monthly; the
 repository is checked every Sunday.
 

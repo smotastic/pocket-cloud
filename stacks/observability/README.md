@@ -1,27 +1,34 @@
 # observability
 
-Shared metrics stack: Prometheus receives metrics from every service over OTLP
-and scrapes per-container CPU and memory from cAdvisor; Grafana shows them.
-Metrics only; there are no traces or logs (no Tempo, no Loki).
+Shared metrics and logs stack: Prometheus receives metrics from every service over
+OTLP and scrapes per-container CPU and memory from cAdvisor. Loki stores logs: Alloy
+tails the output of every container, and services can also push logs over OTLP.
+Grafana shows both. There are no traces (no Tempo).
 
 | | |
 |---|---|
 | Grafana | http://localhost:3001 (`GRAFANA_HTTP_PORT`), user `admin` |
 | Prometheus UI | http://localhost:9090 (`PROMETHEUS_PORT`) |
 | OTLP metrics | `http://prometheus:9090/api/v1/otlp/v1/metrics` (OTLP/HTTP only, no gRPC) |
-| Data | `${DATA_ROOT}/observability/grafana` (Grafana DB), `${DATA_ROOT}/observability/prometheus` (TSDB) |
+| OTLP logs | `http://loki:3100/otlp/v1/logs` (OTLP/HTTP only, inside the compose network) |
+| Data | `${DATA_ROOT}/observability/grafana` (Grafana DB), `.../prometheus` (TSDB), `.../loki` (logs), `.../alloy` (read positions) |
 
-Idle memory is about 0.8 GiB together, nearly all of it Grafana.
+Idle memory is about 1 GiB together, most of it Grafana; Loki and Alloy add
+about 250 MiB.
 
 ## First run
 
 1. Set `GRAFANA_ADMIN_PASSWORD` in `.env`. Grafana only applies it when it creates
    its database on the first start; later changes to `.env` have no effect, change
    the password in the UI (or delete `grafana.db` to start over).
-2. `mkdir -p "$DATA_ROOT"/observability/{grafana,prometheus}`, then
-   `docker compose up -d prometheus grafana` from the repo root.
+2. `mkdir -p "$DATA_ROOT"/observability/{grafana,prometheus,loki,alloy}`, then
+   `docker compose up -d prometheus loki alloy grafana` from the repo root.
 
-Anonymous access is off. The Prometheus data source and the dashboards are
+On its first start Alloy ships every container's existing log history. Loki
+rejects lines older than 7 days (`timestamp too old`) and rate-limits the rest
+for a minute or two; both errors stop once Alloy has caught up.
+
+Anonymous access is off. The Prometheus and Loki data sources and the dashboards are
 provisioned from [`grafana/provisioning/`](grafana/provisioning/) and can't be
 edited in the UI.
 
@@ -73,6 +80,41 @@ and `deployment_environment_name`. `service.name` also becomes `job`.
 Retention is 30 days or 5 GB, whichever is hit first. The TSDB is excluded from
 the restic backup; Grafana's DB is backed up.
 
+## Logs (Loki and Alloy)
+
+[`config.alloy`](config.alloy) discovers every container in the Colima VM through the
+Docker socket (mounted read-only) and pushes its stdout and stderr to Loki. New stacks
+are picked up without changes. Each stream has two labels:
+
+| Label | From |
+|---|---|
+| `container` | container name, e.g. `bookmarks-server` |
+| `service_name` | compose service, e.g. `bookmarks-server` |
+
+In Grafana, *Explore* → *Loki* → `{container="gitea"} |= "error"`. Loki indexes only
+the labels; the text after `|=` is searched line by line, which is fast enough at this
+volume. Grafana adds `detected_level` from the log line where it can.
+
+[`loki.yaml`](loki.yaml) runs Loki as a single binary with its index and chunks on the
+filesystem. Retention is 30 days, enforced by the compactor; there is no size limit.
+Loki is not published on the Mac, it has no authentication.
+
+### Sending logs from a service
+
+Writing to stdout is enough; Alloy collects it. A service that wants structured
+logs with resource attributes can push them over OTLP instead:
+
+```yaml
+    environment:
+      OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: http://loki:3100/otlp/v1/logs
+```
+
+together with the `OTEL_SERVICE_NAME` and `OTEL_RESOURCE_ATTRIBUTES` from the
+metrics section. Loki turns `service.name` and `deployment.environment.name` into
+labels and keeps the other attributes as structured metadata. Such a service
+should not also log the same lines to stdout, or every line is stored twice
+(once with `container`, once without).
+
 ## Smoke test
 
 Push a few test metrics and query them back:
@@ -90,6 +132,19 @@ docker run --rm --network pocket-cloud_default \
 In Grafana, *Explore* → `{job="smoke-test"}` shows the metric `gen` with the labels
 above.
 
+The same for logs:
+
+```sh
+docker run --rm --network pocket-cloud_default \
+  ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen:v0.162.0 logs \
+  --otlp-http --otlp-insecure --otlp-endpoint loki:3100 \
+  --otlp-http-url-path /otlp/v1/logs \
+  --logs 3 --service smoke-test \
+  --otlp-attributes 'deployment.environment.name="production"'
+```
+
+*Explore* → *Loki* → `{service_name="smoke-test"}` shows three lines `the message`.
+
 ## Access
 
 Grafana and Prometheus are published on all interfaces of the Mac, so any device
@@ -103,4 +158,6 @@ revisit this before exposing the Mac via Tailscale.
 docker compose logs -f prometheus      # OTLP ingest errors show up here
 docker compose logs -f grafana         # dashboard provisioning errors show up here
 docker compose logs -f cadvisor
+docker compose logs -f loki            # rejected pushes (too old, rate limit) show up here
+docker compose logs -f alloy
 ```
