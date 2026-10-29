@@ -40,12 +40,42 @@ services:
       - /var/lib/docker:/var/lib/docker:ro
       - /dev/disk:/dev/disk:ro
 
+  # Logs: Alloy tails every container's output, services can also push OTLP logs.
+  # Not published; Grafana and the services reach it as loki:3100.
+  loki:
+    image: grafana/loki:3.7.9
+    container_name: loki
+    restart: unless-stopped
+    command:
+      - -config.file=/etc/loki/loki.yaml
+    volumes:
+      - ./loki.yaml:/etc/loki/loki.yaml:ro
+      - ${DATA_ROOT}/observability/loki:/loki
+
+  alloy:
+    image: grafana/alloy:v1.21.3
+    container_name: alloy
+    restart: unless-stopped
+    depends_on:
+      - loki
+    command:
+      - run
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    # Read-only Docker API access to list containers and read their logs. The data
+    # directory keeps the read positions, so a recreated container doesn't resend logs.
+    volumes:
+      - ./config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${DATA_ROOT}/observability/alloy:/var/lib/alloy/data
+
   grafana:
     image: grafana/grafana:13.2.3
     container_name: grafana
     restart: unless-stopped
     depends_on:
       - prometheus
+      - loki
     environment:
       # Only applied when Grafana creates its database on the first start.
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}

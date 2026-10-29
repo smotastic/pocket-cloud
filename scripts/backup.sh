@@ -24,8 +24,9 @@ SERVICES=(gitea-runner gitea bookmarks-server bookmarks-postgres docmost docmost
   pocket-home-mosquitto pocket-learning-server pocket-learning-postgres)
 EXCLUDES=(
   "$DATA_ROOT/gitea-runner/data/cache"
-  # Metrics are high-churn and low-value; Grafana's DB next to it is kept.
+  # Metrics and logs are high-churn and low-value; Grafana's DB next to them is kept.
   "$DATA_ROOT/observability/prometheus"
+  "$DATA_ROOT/observability/loki"
 )
 KEEP=(--keep-daily 7 --keep-weekly 4 --keep-monthly 12)
 TAG=pocket-cloud
