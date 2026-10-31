@@ -27,6 +27,8 @@ EXCLUDES=(
   # Metrics and logs are high-churn and low-value; Grafana's DB next to them is kept.
   "$DATA_ROOT/observability/prometheus"
   "$DATA_ROOT/observability/loki"
+  # pocket-comms' checkout and builds; no state, rebuilt by scripts/install-comms.sh.
+  "$DATA_ROOT/pocket-comms"
 )
 KEEP=(--keep-daily 7 --keep-weekly 4 --keep-monthly 12)
 TAG=pocket-cloud

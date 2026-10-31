@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Template. scripts/install-comms.sh replaces the __PLACEHOLDERS__ and
+  installs the result to ~/Library/LaunchAgents/. Do not load this file directly.
+-->
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>dev.pocket-cloud.comms</string>
+	<!-- Runs the release built by install-comms.sh; `pnpm start` would rebuild on every start. -->
+	<key>ProgramArguments</key>
+	<array>
+		<string>__NODE__</string>
+		<string>--enable-source-maps</string>
+		<string>__COMMS_DIR__/current/apps/comms-server/dist/main.js</string>
+	</array>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>__BREW_PREFIX__/bin:__BREW_PREFIX__/sbin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+		<!-- The server listens on 127.0.0.1 only; tailscale serve is the one way in. -->
+		<key>COMMS_PORT</key>
+		<string>__COMMS_PORT__</string>
+		<key>COMMS_ALLOWED_LOGIN</key>
+		<string>__COMMS_ALLOWED_LOGIN__</string>
+		<key>COMMS_WEB_DIST</key>
+		<string>__COMMS_DIR__/current/apps/comms-web/dist</string>
+	</dict>
+	<key>WorkingDirectory</key>
+	<string>__COMMS_DIR__/current/apps/comms-server</string>
+	<!-- Start at login, and restart it if it exits. -->
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<true/>
+	<key>ThrottleInterval</key>
+	<integer>30</integer>
+	<key>StandardOutPath</key>
+	<string>__HOME__/Library/Logs/pocket-cloud/comms.log</string>
+	<key>StandardErrorPath</key>
+	<string>__HOME__/Library/Logs/pocket-cloud/comms.log</string>
+</dict>
+</plist>
