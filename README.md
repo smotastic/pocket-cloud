@@ -18,8 +18,10 @@ and no runtime data (that lives under `DATA_ROOT`, outside this repo).
 compose.yaml          # entry point, includes every stack
 mise.toml             # sets DOCKER_CONTEXT inside this repo
 AGENTS.md             # rules for coding agents (CLAUDE.md links here)
-launchd/              # launchd agent templates (Colima VM, daily backup)
-scripts/              # install-autostart.sh, backup.sh, install-backup.sh
+launchd/              # launchd agent templates (Colima VM, daily backup, pocket-comms)
+scripts/              # install-autostart.sh, backup.sh, install-backup.sh, install-comms.sh
+native/
+  pocket-comms/       # pocket-comms, runs on the host, not in the VM (notes only)
 .env.example          # copy to .env; DATA_ROOT, domains, ports
 stacks/
   gitea/              # Git hosting
@@ -91,9 +93,30 @@ Then follow the per-stack notes, e.g. [`stacks/gitea/README.md`](stacks/gitea/RE
 ## Remote access
 
 Services get a tailnet name and HTTPS through their own Tailscale node in
-[`stacks/tailscale`](stacks/tailscale/README.md). The Mac itself runs Tailscale for SSH.
+[`stacks/tailscale`](stacks/tailscale/README.md). The Mac itself runs Tailscale for SSH
+and serves the one native service, pocket-comms (see below).
 With Tailscale's default policy the tailnet also reaches the Mac's published LAN ports;
 the stack's README has a stricter policy that keeps them LAN-only.
+
+## Native services: pocket-comms
+
+[pocket-comms](native/pocket-comms/README.md) reads and drives the Herdr coding agents from the
+phone. It needs Herdr's Unix socket and the agents' session files in `$HOME`, which the Colima VM
+can't use, so it runs on the host under the launchd agent `dev.pocket-cloud.comms`. It listens on
+`127.0.0.1` only and trusts the `Tailscale-User-Login` header, so the Mac's own `tailscale serve`
+is the only way in. A sidecar can't reach the host's loopback, and listening wider would let anyone
+on the LAN forge the header.
+
+```sh
+# once: set POCKET_COMMS_VERSION, POCKET_COMMS_REPO and COMMS_ALLOWED_LOGIN in .env, then
+scripts/install-comms.sh            # clone and build the pinned version under DATA_ROOT, start at login
+sudo tailscale serve --bg 4410      # once, by hand: HTTPS on the Mac's tailnet name
+
+scripts/install-comms.sh status     # agent, version, probe, tailscale serve, log tail
+scripts/install-comms.sh update     # after changing POCKET_COMMS_VERSION (also to roll back)
+```
+
+After any other `.env` change, run `install` again. Logs go to `~/Library/Logs/pocket-cloud/comms.log`.
 
 ## Git remotes
 
@@ -141,7 +164,9 @@ To restore everything: `docker compose down`, move `DATA_ROOT` aside, then
 ## Conventions
 
 - One folder per service under `stacks/`, each with its own `compose.yaml`,
-  added to the `include:` list in the root `compose.yaml`.
+  added to the `include:` list in the root `compose.yaml`. The exception is a service that
+  must run on the host: a template in `launchd/`, `scripts/install-<name>.sh` and a note in
+  `native/<name>/README.md`.
 - Images are pinned to an exact version. Updating means changing the tag in a commit.
 - Persistent data is always a bind mount under `${DATA_ROOT}/<service>/`, never a
   named Docker volume, so it survives a Colima VM reset and is easy to back up.

@@ -2,7 +2,8 @@
 
 Remote access over [Tailscale](https://tailscale.com), split in two:
 
-- **The Mac** runs Tailscale (Homebrew) for SSH. It serves nothing itself.
+- **The Mac** runs Tailscale (Homebrew) for SSH. It serves only
+  [pocket-comms](../../native/pocket-comms/README.md), which runs on the host, not in the VM.
 - **Each exposed service** gets its own Tailscale node: a sidecar container in this stack
   that joins the tailnet under its own name and serves that one service over HTTPS,
   e.g. `https://galaxy.<tailnet>.ts.net`. The certificate comes from Tailscale.
@@ -76,8 +77,8 @@ Once other people join the tailnet, or to keep the LAN ports off it, replace the
   "grants": [
     // Every member reaches the pocket-cloud services, HTTPS only.
     { "src": ["autogroup:member"], "dst": ["tag:pocket-cloud"], "ip": ["tcp:443"] },
-    // SSH to the owner's own devices, which includes the Mac.
-    { "src": ["autogroup:owner"], "dst": ["autogroup:self"], "ip": ["tcp:22"] }
+    // SSH to the owner's own devices, which includes the Mac, and pocket-comms on the Mac.
+    { "src": ["autogroup:owner"], "dst": ["autogroup:self"], "ip": ["tcp:22", "tcp:443"] }
   ],
   "ssh": [
     {
@@ -108,8 +109,9 @@ sudo tailscale up --ssh            # log in with your account; enables Tailscale
 ```
 
 Then, in the admin console, **Disable key expiry** for the Mac (machine menu), otherwise
-it drops off the tailnet after 180 days and SSH stops working. Don't run `tailscale serve`
-on the Mac: services go through the sidecars.
+it drops off the tailnet after 180 days and SSH stops working. The Mac runs `tailscale serve`
+for pocket-comms only (443 → `127.0.0.1:4410`, see its
+[README](../../native/pocket-comms/README.md)); every container service goes through a sidecar.
 
 ## First start
 

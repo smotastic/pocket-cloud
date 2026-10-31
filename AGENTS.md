@@ -27,7 +27,9 @@ without asking; it takes every service down.
 - This repository is **public**. Never commit secrets, hostnames, IPs, or personal paths.
   Secrets go in `.env` (git-ignored); templates use placeholders.
 - One folder per service in `stacks/<service>/` with its own `compose.yaml` and `README.md`,
-  listed in the root `compose.yaml`. Pin images to an exact version.
+  listed in the root `compose.yaml`. Pin images to an exact version. A service that must run on
+  the host (pocket-comms) instead gets `launchd/<label>.plist`, `scripts/install-<name>.sh` and
+  `native/<name>/README.md`, and is pinned to a git tag or full SHA in `.env`.
 - Persistent data is a bind mount under `${DATA_ROOT}/<service>/`, never a named volume.
 - Track tasks as Gitea issues (`tea issues ... --login local --repo smotastic/pocket-cloud`), not in
   Markdown files. Close the issue when the task is done (`Closes #N` in the commit); open one for new work.
