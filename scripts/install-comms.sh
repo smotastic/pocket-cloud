@@ -153,6 +153,11 @@ render_agent() {
 load_agent() {
   if is_loaded; then
     launchctl bootout "$DOMAIN/$LABEL"
+    # bootout returns before the service is gone; bootstrap fails until it is.
+    for _ in {1..20}; do
+      is_loaded || break
+      sleep 0.5
+    done
   fi
   launchctl bootstrap "$DOMAIN" "$AGENT"
 }
@@ -243,7 +248,8 @@ status() {
   local sha tag code
 
   if is_loaded; then
-    launchctl print "$DOMAIN/$LABEL" | grep -E '^\s*(state|last exit code) ='
+    # One tab: the service's own lines, not those of its nested endpoints.
+    launchctl print "$DOMAIN/$LABEL" | grep -E $'^\t(state|last exit code) ='
   elif [[ -f "$AGENT" ]]; then
     echo "$LABEL is installed and loads at the next desktop login."
   else

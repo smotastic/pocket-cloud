@@ -35,7 +35,7 @@ In `.env`:
 
 | Variable | Meaning |
 |---|---|
-| `POCKET_COMMS_VERSION` | Tag (`vX.Y.Z`) or full commit SHA to run. Branch names and short SHAs are refused. |
+| `POCKET_COMMS_VERSION` | Tag (`comms-vX.Y.Z`) or full commit SHA to run. Branch names and short SHAs are refused. |
 | `POCKET_COMMS_REPO` | Clone URL, e.g. Gitea over SSH or the GitHub mirror |
 | `COMMS_PORT` | The server's port on `127.0.0.1`, default `4410` |
 | `COMMS_ALLOWED_LOGIN` | The Tailscale login that may use the app: `<user>@<provider>`, or `<user>@` for any provider |
