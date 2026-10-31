@@ -13,6 +13,9 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ${DATA_ROOT}/observability/prometheus:/prometheus
+    configs:
+      - source: gitea-metrics-token
+        target: /etc/prometheus/gitea-metrics-token
     ports:
       - ${PROMETHEUS_PORT}:9090
 
@@ -85,3 +88,10 @@ services:
       - ${DATA_ROOT}/observability/grafana:/var/lib/grafana
     ports:
       - ${GRAFANA_HTTP_PORT}:3000
+
+configs:
+  # Bearer token for scraping Gitea; prometheus.yml can't read environment variables.
+  # An empty value would make Compose mount the stack folder instead, hence the
+  # placeholder: Gitea ignores the header when it has no token itself.
+  gitea-metrics-token:
+    content: ${GITEA_METRICS_TOKEN:-unset}

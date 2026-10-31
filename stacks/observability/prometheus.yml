@@ -1,4 +1,4 @@
-# Metrics arrive over OTLP; Prometheus scrapes only itself and cAdvisor.
+# Metrics arrive over OTLP; Prometheus scrapes only itself, cAdvisor and Gitea.
 global:
   scrape_interval: 30s
 
@@ -22,3 +22,9 @@ scrape_configs:
   - job_name: cadvisor
     static_configs:
       - targets: [cadvisor:8080]
+
+  - job_name: gitea
+    authorization:
+      credentials_file: /etc/prometheus/gitea-metrics-token
+    static_configs:
+      - targets: [gitea:3000]

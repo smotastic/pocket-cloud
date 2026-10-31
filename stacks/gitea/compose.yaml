@@ -13,6 +13,10 @@ services:
       # `git push gitea:<owner>/<repo>.git` creates the repo (private) if it doesn't exist.
       GITEA__repository__ENABLE_PUSH_CREATE_USER: "true"
       GITEA__repository__DEFAULT_PUSH_CREATE_PRIVATE: "true"
+      # /metrics for Prometheus (stacks/observability), behind a bearer token.
+      # Without a token Gitea serves /metrics to anyone who reaches its port.
+      GITEA__metrics__ENABLED: "true"
+      GITEA__metrics__TOKEN: ${GITEA_METRICS_TOKEN}
     volumes:
       - ${DATA_ROOT}/gitea/data:/var/lib/gitea
       - ${DATA_ROOT}/gitea/config:/etc/gitea

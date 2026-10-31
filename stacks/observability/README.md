@@ -1,8 +1,9 @@
 # observability
 
 Shared metrics and logs stack: Prometheus receives metrics from every service over
-OTLP and scrapes per-container CPU and memory from cAdvisor. Loki stores logs: Alloy
-tails the output of every container, and services can also push logs over OTLP.
+OTLP and scrapes per-container CPU and memory from cAdvisor and Gitea's own
+metrics. Loki stores logs: Alloy tails the output of every container, and services
+can also push logs over OTLP.
 Grafana shows both. There are no traces (no Tempo).
 
 | | |
@@ -41,6 +42,7 @@ edit a copy in the UI (*Save as*), export it as JSON and replace the file.
 | Dashboard | Shows |
 |---|---|
 | Container memory | Working set per app and per container, memory limits, OOM kills, VM total |
+| Gitea | Scrape status, repositories, open and closed issues, process memory |
 
 An *app* is the container name up to the first dash, two words for `pocket-*`:
 `bookmarks-server` → `bookmarks`, `pocket-galaxy-web` → `pocket-galaxy`. New stacks
@@ -54,6 +56,25 @@ cAdvisor runs privileged with read-only mounts of the Colima VM's `/`, `/sys` an
 the only container label kept is `com.docker.compose.service`, to keep cardinality low.
 Memory panels use `container_memory_working_set_bytes`, the same number `docker stats`
 shows.
+
+## Gitea metrics
+
+Prometheus scrapes `gitea:3000/metrics` (job `gitea`) over the compose network with
+the bearer token `GITEA_METRICS_TOKEN` from `.env`. Gitea checks the same variable,
+see [`../gitea/README.md`](../gitea/README.md#metrics). Prometheus' config can't read
+environment variables, so [`compose.yaml`](compose.yaml) mounts the token as the file
+`/etc/prometheus/gitea-metrics-token`. Gitea's metrics are counts from its database
+(repositories, issues, users, ...) plus Go runtime and process metrics.
+
+Check the target under *Status* → *Target health* in the Prometheus UI, or:
+
+```sh
+curl -s 'http://localhost:9090/api/v1/targets?scrapePool=gitea' | grep -o '"health":"[a-z]*"'
+```
+
+`"health":"up"` is good. A `401 Unauthorized` error means the two containers have
+different tokens: recreate both
+(`docker compose up -d --force-recreate gitea prometheus`).
 
 ## Sending metrics from a service
 
