@@ -1,0 +1,43 @@
+# Alert rules, evaluated by Prometheus and sent through Alertmanager to Discord.
+groups:
+  - name: colima-vm
+    rules:
+      # /var/lib/docker holds images, containers and build cache (the VM's data disk);
+      # / is the VM's system disk. Data under ${DATA_ROOT} is on the Mac, not here.
+      - alert: VmDiskFilling
+        expr: |
+          1 - node_filesystem_avail_bytes{job="node-exporter", mountpoint=~"/|/var/lib/docker"}
+            / node_filesystem_size_bytes{job="node-exporter", mountpoint=~"/|/var/lib/docker"} > 0.80
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Colima VM disk {{ $labels.mountpoint }} is {{ $value | humanizePercentage }} full
+          description: >-
+            Check `docker system df`; build cache is capped by BuildKit GC, so old image
+            tags are the likely cause (`docker image prune`).
+
+      - alert: VmDiskAlmostFull
+        expr: |
+          1 - node_filesystem_avail_bytes{job="node-exporter", mountpoint=~"/|/var/lib/docker"}
+            / node_filesystem_size_bytes{job="node-exporter", mountpoint=~"/|/var/lib/docker"} > 0.90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Colima VM disk {{ $labels.mountpoint }} is {{ $value | humanizePercentage }} full
+          description: >-
+            Builds and container writes fail once it is full. Free space now:
+            `docker system df`, then `docker image prune` or `docker builder prune`.
+
+  - name: monitoring
+    rules:
+      # Without this, a dead exporter would silently stop the alerts above.
+      - alert: ScrapeTargetDown
+        expr: up{job=~"node-exporter|cadvisor|alertmanager"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Prometheus can't scrape {{ $labels.job }}
+          description: "`docker compose ps` and `docker compose logs {{ $labels.job }}`."

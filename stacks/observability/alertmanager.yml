@@ -1,0 +1,20 @@
+# Every alert goes to one Discord channel. The webhook URL comes from .env as a
+# compose secret (see compose.yaml), so this file holds no secrets.
+route:
+  receiver: discord
+  group_by: [alertname, mountpoint]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 12h
+
+# A critical alert replaces the warning for the same disk.
+inhibit_rules:
+  - source_matchers: [severity="critical"]
+    target_matchers: [severity="warning"]
+    equal: [mountpoint]
+
+receivers:
+  - name: discord
+    discord_configs:
+      - webhook_url_file: /run/secrets/alerts_discord_webhook_url
+        send_resolved: true
