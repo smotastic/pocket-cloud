@@ -1,4 +1,4 @@
-# Alert rules, evaluated by Prometheus and sent through Alertmanager to Telegram.
+# Alert rules, evaluated by Prometheus and sent through Alertmanager to Discord.
 groups:
   - name: colima-vm
     rules:

@@ -53,7 +53,7 @@ services:
     volumes:
       - /:/host:ro,rslave
 
-  # Sends the alerts that Prometheus fires to Telegram. Silences live in its data dir.
+  # Sends the alerts that Prometheus fires to Discord. Silences live in its data dir.
   alertmanager:
     image: prom/alertmanager:v0.34.2
     container_name: alertmanager
@@ -63,8 +63,7 @@ services:
       - --storage.path=/alertmanager
       - --web.external-url=http://localhost:${ALERTMANAGER_PORT}
     secrets:
-      - alerts_telegram_bot_token
-      - alerts_telegram_chat_id
+      - alerts_discord_webhook_url
     volumes:
       - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - ${DATA_ROOT}/observability/alertmanager:/alertmanager
@@ -119,7 +118,5 @@ services:
 
 # Mounted as files under /run/secrets/ in the alertmanager container.
 secrets:
-  alerts_telegram_bot_token:
-    environment: ALERTS_TELEGRAM_BOT_TOKEN
-  alerts_telegram_chat_id:
-    environment: ALERTS_TELEGRAM_CHAT_ID
+  alerts_discord_webhook_url:
+    environment: ALERTS_DISCORD_WEBHOOK_URL

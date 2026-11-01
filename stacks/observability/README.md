@@ -5,7 +5,7 @@ Shared metrics and logs stack: Prometheus receives metrics from every service ov
 OTLP and scrapes per-container CPU and memory from cAdvisor. Loki stores logs: Alloy
 tails the output of every container, and services can also push logs over OTLP.
 Grafana shows both. There are no traces (no Tempo). Alertmanager sends Prometheus alerts
-to Telegram; so far they watch the Colima VM's disks (see [Alerts](#alerts)).
+to Discord; so far they watch the Colima VM's disks (see [Alerts](#alerts)).
 
 | | |
 |---|---|
@@ -150,7 +150,7 @@ docker run --rm --network pocket-cloud_default \
 ## Alerts
 
 Prometheus evaluates the rules in [`alerts.yml`](alerts.yml) every 30 s and hands firing
-alerts to Alertmanager, which sends them to one Telegram chat
+alerts to Alertmanager, which sends them to one Discord channel
 ([`alertmanager.yml`](alertmanager.yml)). Resolved alerts are sent too; an alert that
 keeps firing is repeated every 12 h.
 
@@ -165,19 +165,21 @@ read-only mount of its `/`. `/var/lib/docker` is the VM's data disk with images,
 containers and build cache; `${DATA_ROOT}` is on the Mac and not covered. They count
 ext4's reserved blocks as used, so they read a few percent higher than `df`.
 
-### Set up the Telegram bot
+### Set up the Discord webhook
 
-1. In Telegram, message [@BotFather](https://t.me/BotFather), send `/newbot` and copy the
-   token into `ALERTS_TELEGRAM_BOT_TOKEN` in `.env`.
-2. Send the new bot any message, then read the chat ID from
-   `curl -s https://api.telegram.org/bot<token>/getUpdates | jq '.result[0].message.chat.id'`
-   into `ALERTS_TELEGRAM_CHAT_ID`. For a group chat, add the bot to the group instead;
-   the ID is negative.
-3. `docker compose up -d --force-recreate alertmanager`. Compose writes both values to
+1. In Discord, create a channel for alerts on a server where you can manage webhooks
+   (your own server works), e.g. `#pocket-cloud-alerts`.
+2. *Edit Channel* (gear icon) → *Integrations* → *Webhooks* → *New Webhook*. Name it,
+   e.g. `pocket-cloud`, and *Copy Webhook URL*.
+3. Put the URL into `ALERTS_DISCORD_WEBHOOK_URL` in `.env`. It is a secret: anyone with
+   it can post to the channel. If it leaks, delete the webhook and create a new one.
+4. `docker compose up -d --force-recreate alertmanager`. Compose writes the value to
    `/run/secrets/` when it creates the container, so a changed `.env` needs a recreate.
+5. So that alerts reach your phone: in the Discord app, long-press the channel →
+   *Notification Settings* → *All Messages*, and don't mute the channel or server.
 
-Without the two values, alerts still show up in Prometheus (*Alerts*) and in the
-Alertmanager UI, and Alertmanager logs `Notify attempt failed` for each attempt.
+Without the URL, alerts still show up in Prometheus (*Alerts*) and in the
+Alertmanager UI, and Alertmanager logs `Notify for alerts failed`.
 
 Send a test alert, which arrives within 30 s and resolves after 5 min:
 
@@ -216,7 +218,7 @@ exposing the Mac via Tailscale.
 docker compose logs -f prometheus      # OTLP ingest errors show up here
 docker compose logs -f grafana         # dashboard provisioning errors show up here
 docker compose logs -f cadvisor
-docker compose logs -f alertmanager    # failed Telegram sends show up here
+docker compose logs -f alertmanager    # failed Discord sends show up here
 docker compose logs -f loki            # rejected pushes (too old, rate limit) show up here
 docker compose logs -f alloy
 ```
