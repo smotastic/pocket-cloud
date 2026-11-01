@@ -26,7 +26,7 @@ native/
 stacks/
   gitea/              # Git hosting
   gitea-runner/       # Gitea Actions runner
-  observability/      # Grafana + Prometheus (OTLP metrics) + cAdvisor + Loki/Alloy (logs)
+  observability/      # Grafana + Prometheus (OTLP metrics) + cAdvisor + Loki/Alloy (logs) + alerts
   bookmarks/          # pocket-factory bookmarks blueprint (proof of concept)
   docmost/            # Docmost household wiki
   pocket-galaxy/      # Pocket Galaxy, worlds and maps for tabletop campaigns
@@ -79,7 +79,7 @@ All `docker compose` commands below assume the context is set.
 
 ```sh
 cp .env.example .env            # adjust if needed
-source .env && mkdir -p "$DATA_ROOT"/gitea/{data,config} "$DATA_ROOT"/observability/{grafana,prometheus,loki,alloy} \
+source .env && mkdir -p "$DATA_ROOT"/gitea/{data,config} "$DATA_ROOT"/observability/{grafana,prometheus,loki,alloy,alertmanager} \
   "$DATA_ROOT"/docmost/{storage,postgres} "$DATA_ROOT"/pocket-galaxy/{postgres,assets} \
   "$DATA_ROOT"/pocket-home/{mosquitto/config,mosquitto/data,postgres} "$DATA_ROOT"/pocket-learning/postgres \
   "$DATA_ROOT"/tailscale/{galaxy,docmost,learning}

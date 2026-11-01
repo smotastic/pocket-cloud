@@ -1,9 +1,11 @@
-# observability
+| Alertmanager UI | http://localhost:9093 (`ALERTMANAGER_PORT`), active alerts and silences |
+| Data | `${DATA_ROOT}/observability/grafana` (Grafana DB), `.../prometheus` (TSDB), `.../loki` (logs), `.../alloy` (read positions), `.../alertmanager` (silences) |# observability
 
 Shared metrics and logs stack: Prometheus receives metrics from every service over
 OTLP and scrapes per-container CPU and memory from cAdvisor. Loki stores logs: Alloy
 tails the output of every container, and services can also push logs over OTLP.
-Grafana shows both. There are no traces (no Tempo).
+Grafana shows both. There are no traces (no Tempo). Alertmanager sends Prometheus alerts
+to Telegram; so far they watch the Colima VM's disks (see [Alerts](#alerts)).
 
 | | |
 |---|---|
@@ -21,8 +23,8 @@ about 250 MiB.
 1. Set `GRAFANA_ADMIN_PASSWORD` in `.env`. Grafana only applies it when it creates
    its database on the first start; later changes to `.env` have no effect, change
    the password in the UI (or delete `grafana.db` to start over).
-2. `mkdir -p "$DATA_ROOT"/observability/{grafana,prometheus,loki,alloy}`, then
-   `docker compose up -d prometheus loki alloy grafana` from the repo root.
+2. `mkdir -p "$DATA_ROOT"/observability/{grafana,prometheus,loki,alloy,alertmanager}`, then
+   `docker compose up -d prometheus node-exporter alertmanager loki alloy grafana` from the repo root.
 
 On its first start Alloy ships every container's existing log history. Loki
 rejects lines older than 7 days (`timestamp too old`) and rate-limits the rest
@@ -145,12 +147,68 @@ docker run --rm --network pocket-cloud_default \
 
 *Explore* → *Loki* → `{service_name="smoke-test"}` shows three lines `the message`.
 
+## Alerts
+
+Prometheus evaluates the rules in [`alerts.yml`](alerts.yml) every 30 s and hands firing
+alerts to Alertmanager, which sends them to one Telegram chat
+([`alertmanager.yml`](alertmanager.yml)). Resolved alerts are sent too; an alert that
+keeps firing is repeated every 12 h.
+
+| Alert | Fires when |
+|---|---|
+| `VmDiskFilling` (warning) | a Colima VM disk (`/` or `/var/lib/docker`) is over 80 % full for 10 min |
+| `VmDiskAlmostFull` (critical) | the same disk is over 90 % full for 5 min; replaces the warning |
+| `ScrapeTargetDown` (warning) | node-exporter, cAdvisor or Alertmanager can't be scraped for 5 min |
+
+The disk numbers come from node-exporter, which reads the VM's filesystems through a
+read-only mount of its `/`. `/var/lib/docker` is the VM's data disk with images,
+containers and build cache; `${DATA_ROOT}` is on the Mac and not covered. They count
+ext4's reserved blocks as used, so they read a few percent higher than `df`.
+
+### Set up the Telegram bot
+
+1. In Telegram, message [@BotFather](https://t.me/BotFather), send `/newbot` and copy the
+   token into `ALERTS_TELEGRAM_BOT_TOKEN` in `.env`.
+2. Send the new bot any message, then read the chat ID from
+   `curl -s https://api.telegram.org/bot<token>/getUpdates | jq '.result[0].message.chat.id'`
+   into `ALERTS_TELEGRAM_CHAT_ID`. For a group chat, add the bot to the group instead;
+   the ID is negative.
+3. `docker compose up -d --force-recreate alertmanager`. Compose writes both values to
+   `/run/secrets/` when it creates the container, so a changed `.env` needs a recreate.
+
+Without the two values, alerts still show up in Prometheus (*Alerts*) and in the
+Alertmanager UI, and Alertmanager logs `Notify attempt failed` for each attempt.
+
+Send a test alert, which arrives within 30 s and resolves after 5 min:
+
+```sh
+curl -XPOST localhost:9093/api/v2/alerts -H 'Content-Type: application/json' \
+  -d '[{"labels":{"alertname":"TestAlert","severity":"warning"},"annotations":{"summary":"test"}}]'
+```
+
+To mute an alert, for example during planned work, create a silence in the
+Alertmanager UI.
+
+### Changing rules
+
+Edit `alerts.yml` and check it before reloading:
+
+```sh
+docker run --rm -v "$PWD"/stacks/observability:/c:ro --entrypoint promtool \
+  prom/prometheus:v3.15.0 check rules /c/alerts.yml
+docker compose restart prometheus
+```
+
+Use `amtool check-config` from the `prom/alertmanager` image the same way for
+`alertmanager.yml`, then `docker compose restart alertmanager`.
+
 ## Access
 
-Grafana and Prometheus are published on all interfaces of the Mac, so any device
-on the LAN can reach them. Nothing is reachable from outside because the router
-forwards no ports. The Prometheus UI and query API have no authentication;
-revisit this before exposing the Mac via Tailscale.
+Grafana, Prometheus and Alertmanager are published on all interfaces of the Mac, so
+any device on the LAN can reach them. Nothing is reachable from outside because the
+router forwards no ports. The Prometheus and Alertmanager UIs and APIs have no
+authentication (anyone on the LAN could silence an alert); revisit this before
+exposing the Mac via Tailscale.
 
 ## Debugging
 
@@ -158,6 +216,7 @@ revisit this before exposing the Mac via Tailscale.
 docker compose logs -f prometheus      # OTLP ingest errors show up here
 docker compose logs -f grafana         # dashboard provisioning errors show up here
 docker compose logs -f cadvisor
+docker compose logs -f alertmanager    # failed Telegram sends show up here
 docker compose logs -f loki            # rejected pushes (too old, rate limit) show up here
 docker compose logs -f alloy
 ```
