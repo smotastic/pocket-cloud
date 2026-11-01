@@ -31,6 +31,16 @@ Self-hosted Git server, using the rootless image and SQLite.
 Settings set via `GITEA__section__KEY` environment variables in `compose.yaml`
 override `app.ini` on every start, so keep durable changes there.
 
+## Metrics
+
+`/metrics` is enabled for Prometheus ([`../observability/`](../observability/README.md#gitea-metrics))
+and protected by a bearer token. Generate one with `openssl rand -hex 32` and set it
+as `GITEA_METRICS_TOKEN` in `.env`.
+
+Without a token Gitea serves `/metrics` to anyone who reaches its port (repo, user
+and issue counts, no content). Changing the token needs both containers recreated:
+`docker compose up -d --force-recreate gitea prometheus`.
+
 ## SSH access
 
 Add a key under *Settings → SSH / GPG Keys*, then add to `~/.ssh/config`

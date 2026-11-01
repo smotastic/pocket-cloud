@@ -1,19 +1,20 @@
-| Alertmanager UI | http://localhost:9093 (`ALERTMANAGER_PORT`), active alerts and silences |
-| Data | `${DATA_ROOT}/observability/grafana` (Grafana DB), `.../prometheus` (TSDB), `.../loki` (logs), `.../alloy` (read positions), `.../alertmanager` (silences) |# observability
+# observability
 
 Shared metrics and logs stack: Prometheus receives metrics from every service over
-OTLP and scrapes per-container CPU and memory from cAdvisor. Loki stores logs: Alloy
-tails the output of every container, and services can also push logs over OTLP.
-Grafana shows both. There are no traces (no Tempo). Alertmanager sends Prometheus alerts
-to Discord; so far they watch the Colima VM's disks (see [Alerts](#alerts)).
+OTLP and scrapes per-container CPU and memory from cAdvisor and Gitea's own
+metrics. Loki stores logs: Alloy tails the output of every container, and services
+can also push logs over OTLP. Grafana shows both. There are no traces (no Tempo).
+Alertmanager sends Prometheus alerts to Discord; so far they watch the Colima VM's
+disks (see [Alerts](#alerts)).
 
 | | |
 |---|---|
 | Grafana | http://localhost:3001 (`GRAFANA_HTTP_PORT`), user `admin` |
 | Prometheus UI | http://localhost:9090 (`PROMETHEUS_PORT`) |
+| Alertmanager UI | http://localhost:9093 (`ALERTMANAGER_PORT`), active alerts and silences |
 | OTLP metrics | `http://prometheus:9090/api/v1/otlp/v1/metrics` (OTLP/HTTP only, no gRPC) |
 | OTLP logs | `http://loki:3100/otlp/v1/logs` (OTLP/HTTP only, inside the compose network) |
-| Data | `${DATA_ROOT}/observability/grafana` (Grafana DB), `.../prometheus` (TSDB), `.../loki` (logs), `.../alloy` (read positions) |
+| Data | `${DATA_ROOT}/observability/grafana` (Grafana DB), `.../prometheus` (TSDB), `.../loki` (logs), `.../alloy` (read positions), `.../alertmanager` (silences) |
 
 Idle memory is about 1 GiB together, most of it Grafana; Loki and Alloy add
 about 250 MiB.
@@ -43,6 +44,7 @@ edit a copy in the UI (*Save as*), export it as JSON and replace the file.
 | Dashboard | Shows |
 |---|---|
 | Container memory | Working set per app and per container, memory limits, OOM kills, VM total |
+| Gitea | Scrape status, repositories, open and closed issues, process memory |
 
 An *app* is the container name up to the first dash, two words for `pocket-*`:
 `bookmarks-server` → `bookmarks`, `pocket-galaxy-web` → `pocket-galaxy`. New stacks
@@ -56,6 +58,25 @@ cAdvisor runs privileged with read-only mounts of the Colima VM's `/`, `/sys` an
 the only container label kept is `com.docker.compose.service`, to keep cardinality low.
 Memory panels use `container_memory_working_set_bytes`, the same number `docker stats`
 shows.
+
+## Gitea metrics
+
+Prometheus scrapes `gitea:3000/metrics` (job `gitea`) over the compose network with
+the bearer token `GITEA_METRICS_TOKEN` from `.env`. Gitea checks the same variable,
+see [`../gitea/README.md`](../gitea/README.md#metrics). Prometheus' config can't read
+environment variables, so [`compose.yaml`](compose.yaml) mounts the token as the file
+`/etc/prometheus/gitea-metrics-token`. Gitea's metrics are counts from its database
+(repositories, issues, users, ...) plus Go runtime and process metrics.
+
+Check the target under *Status* → *Target health* in the Prometheus UI, or:
+
+```sh
+curl -s 'http://localhost:9090/api/v1/targets?scrapePool=gitea' | grep -o '"health":"[a-z]*"'
+```
+
+`"health":"up"` is good. A `401 Unauthorized` error means the two containers have
+different tokens: recreate both
+(`docker compose up -d --force-recreate gitea prometheus`).
 
 ## Sending metrics from a service
 

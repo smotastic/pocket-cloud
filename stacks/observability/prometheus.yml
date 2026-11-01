@@ -1,5 +1,5 @@
-# Metrics arrive over OTLP; Prometheus scrapes itself, cAdvisor, node-exporter and
-# Alertmanager. Alert rules are in alerts.yml.
+# Metrics arrive over OTLP; Prometheus scrapes itself, cAdvisor, node-exporter,
+# Alertmanager and Gitea. Alert rules are in alerts.yml.
 global:
   scrape_interval: 30s
   evaluation_interval: 30s
@@ -40,3 +40,9 @@ scrape_configs:
   - job_name: alertmanager
     static_configs:
       - targets: [alertmanager:9093]
+
+  - job_name: gitea
+    authorization:
+      credentials_file: /etc/prometheus/gitea-metrics-token
+    static_configs:
+      - targets: [gitea:3000]
