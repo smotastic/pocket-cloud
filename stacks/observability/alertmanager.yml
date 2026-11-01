@@ -1,7 +1,7 @@
-# Every alert goes to one Telegram chat. The bot token and chat ID come from .env
-# as compose secrets (see compose.yaml), so this file holds no secrets.
+# Every alert goes to one Discord channel. The webhook URL comes from .env as a
+# compose secret (see compose.yaml), so this file holds no secrets.
 route:
-  receiver: telegram
+  receiver: discord
   group_by: [alertname, mountpoint]
   group_wait: 30s
   group_interval: 5m
@@ -14,8 +14,7 @@ inhibit_rules:
     equal: [mountpoint]
 
 receivers:
-  - name: telegram
-    telegram_configs:
-      - bot_token_file: /run/secrets/alerts_telegram_bot_token
-        chat_id_file: /run/secrets/alerts_telegram_chat_id
+  - name: discord
+    discord_configs:
+      - webhook_url_file: /run/secrets/alerts_discord_webhook_url
         send_resolved: true
