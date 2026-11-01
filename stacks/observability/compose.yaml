@@ -12,6 +12,7 @@ services:
       - --storage.tsdb.retention.size=5GB
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alerts.yml:/etc/prometheus/alerts.yml:ro
       - ${DATA_ROOT}/observability/prometheus:/prometheus
     ports:
       - ${PROMETHEUS_PORT}:9090
@@ -39,6 +40,36 @@ services:
       - /sys:/sys:ro
       - /var/lib/docker:/var/lib/docker:ro
       - /dev/disk:/dev/disk:ro
+
+  # Disk usage of the Colima VM (system disk and the /var/lib/docker data disk), for
+  # the alerts in alerts.yml. Sees the VM, not the Mac.
+  node-exporter:
+    image: prom/node-exporter:v1.12.1
+    container_name: node-exporter
+    restart: unless-stopped
+    pid: host
+    command:
+      - --path.rootfs=/host
+    volumes:
+      - /:/host:ro,rslave
+
+  # Sends the alerts that Prometheus fires to Telegram. Silences live in its data dir.
+  alertmanager:
+    image: prom/alertmanager:v0.34.2
+    container_name: alertmanager
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --web.external-url=http://localhost:${ALERTMANAGER_PORT}
+    secrets:
+      - alerts_telegram_bot_token
+      - alerts_telegram_chat_id
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ${DATA_ROOT}/observability/alertmanager:/alertmanager
+    ports:
+      - ${ALERTMANAGER_PORT}:9093
 
   # Logs: Alloy tails every container's output, services can also push OTLP logs.
   # Not published; Grafana and the services reach it as loki:3100.
@@ -85,3 +116,10 @@ services:
       - ${DATA_ROOT}/observability/grafana:/var/lib/grafana
     ports:
       - ${GRAFANA_HTTP_PORT}:3000
+
+# Mounted as files under /run/secrets/ in the alertmanager container.
+secrets:
+  alerts_telegram_bot_token:
+    environment: ALERTS_TELEGRAM_BOT_TOKEN
+  alerts_telegram_chat_id:
+    environment: ALERTS_TELEGRAM_CHAT_ID
