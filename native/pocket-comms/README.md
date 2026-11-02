@@ -39,9 +39,14 @@ In `.env`:
 | `POCKET_COMMS_REPO` | Clone URL, e.g. Gitea over SSH or the GitHub mirror |
 | `COMMS_PORT` | The server's port on `127.0.0.1`, default `4410` |
 | `COMMS_ALLOWED_LOGIN` | The Tailscale login that may use the app: `<user>@<provider>`, or `<user>@` for any provider |
-| `COMMS_GITEA_TOKEN` | Optional. Gitea token with `read:issue` and `read:repository` for the issue lists; the plist is then mode `600` |
+| `COMMS_GITEA_TOKEN` | Optional. Gitea token with `write:issue` and `read:repository`: the issue lists, closing issues and the issues created from the brainstorm chat; the plist is mode `600` |
 | `COMMS_GITEA_URL` | Optional. The Gitea to read, default `http://localhost:3000` |
 | `COMMS_GITEA_HOSTS` | Optional. Further host names of that Gitea in git remotes (SSH aliases), comma-separated, default `gitea` |
+| `COMMS_BRAINSTORM_PROVIDER`, `COMMS_BRAINSTORM_MODEL` | Optional. The brainstorm chat's model, such as `openai` and `gpt-6-luna`; without both the chat says it is not set up |
+| `COMMS_BRAINSTORM_API_KEY` | Optional. An API key for that provider; without it the server uses the Mac user's Pi login (`pi`, then `/login`) |
+| `COMMS_BRAINSTORM_THINKING` | Optional. `off` (default) to `max` |
+| `COMMS_STATE_DIR` | Optional. Where the brainstorm chat is kept, default `~/.pocket-comms` |
+| `COMMS_PI_AUTH_FILE` | Optional. Pi's credential file, default `~/.pi/agent/auth.json` |
 
 Requires Node.js 26+ and pnpm 11+ (Homebrew). Then:
 
@@ -82,6 +87,8 @@ ${DATA_ROOT}/pocket-comms/
 The agent runs `node apps/comms-server/dist/main.js` of `current` with `COMMS_WEB_DIST` pointing at
 the built web app; `pnpm start` would rebuild on every restart. The three newest releases are kept.
 The folder holds no state (the app keeps "seen" in memory), so it is excluded from the backups.
+The brainstorm chat is the one stored state, in `COMMS_STATE_DIR` (`~/.pocket-comms/brainstorm.json`);
+losing it loses only the conversation, not the issues created from it.
 Logs go to `~/Library/Logs/pocket-cloud/comms.log`.
 
 ## Update and rollback
