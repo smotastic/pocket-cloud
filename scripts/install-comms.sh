@@ -147,6 +147,14 @@ render_agent() {
       -e "s|__BREW_PREFIX__|$(brew --prefix)|g" \
       -e "s|__HOME__|$HOME|g" \
       "$TEMPLATE" > "$AGENT"
+  # Optional settings, only when set; plutil escapes the values. The token makes the plist a secret.
+  chmod 600 "$AGENT"
+  local name
+  for name in COMMS_GITEA_URL COMMS_GITEA_TOKEN COMMS_GITEA_HOSTS; do
+    if [[ -n "${!name:-}" ]]; then
+      plutil -insert "EnvironmentVariables.$name" -string "${!name}" "$AGENT"
+    fi
+  done
   plutil -lint "$AGENT" >/dev/null
 }
 

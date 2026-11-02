@@ -39,6 +39,9 @@ In `.env`:
 | `POCKET_COMMS_REPO` | Clone URL, e.g. Gitea over SSH or the GitHub mirror |
 | `COMMS_PORT` | The server's port on `127.0.0.1`, default `4410` |
 | `COMMS_ALLOWED_LOGIN` | The Tailscale login that may use the app: `<user>@<provider>`, or `<user>@` for any provider |
+| `COMMS_GITEA_TOKEN` | Optional. Gitea token with `read:issue` and `read:repository` for the issue lists; the plist is then mode `600` |
+| `COMMS_GITEA_URL` | Optional. The Gitea to read, default `http://localhost:3000` |
+| `COMMS_GITEA_HOSTS` | Optional. Further host names of that Gitea in git remotes (SSH aliases), comma-separated, default `gitea` |
 
 Requires Node.js 26+ and pnpm 11+ (Homebrew). Then:
 
