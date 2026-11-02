@@ -18,7 +18,9 @@ ENDPOINT="http://127.0.0.1:${PROMETHEUS_PORT:-9090}/api/v1/otlp/v1/metrics"
 # On APFS the size is the container's, shared by its volumes, so 1 - avail/size is
 # how full the disk is, not just this volume.
 read -r _ size_kb _ avail_kb _ mountpoint < <(df -kP "$DATA_ROOT" | tail -n 1)
-now_ns="$(date +%s)000000000"
+# Milliseconds, Prometheus' resolution: with whole seconds, two runs in the same second
+# (install, then the agent's first run) collide and the second is rejected with a 400.
+now_ns="$(perl -MTime::HiRes=time -e 'printf "%d000000", time * 1000')"
 
 gauge() {
   cat <<JSON
