@@ -1,8 +1,9 @@
 # pocket-learning
 
-[pocket-learning](https://github.com/smotastic/pocket-learning): flashcards with spaced review,
-starting with Tulu. A web app for review and lessons with the learning coach, a REST API, the
-coach API, and the `learn` CLI the teaching agent uses to write cards. Its images are built from the repository's Dockerfiles and pulled from Gitea's
+[pocket-learning](https://github.com/smotastic/pocket-learning): flashcards with spaced review for
+any subject (Tulu first), each with a charter the learner approves. A web app for review and lessons
+with the learning coach, a REST API, the coach API, and the `learn` CLI the teaching agent uses to
+write cards. Its images are built from the repository's Dockerfiles and pulled from Gitea's
 container registry.
 
 | | |
@@ -64,15 +65,22 @@ works as long as migrations are additive; otherwise restore the backup taken bef
 The cards, reviews and flags of the old flashcards app (`deck/items.jsonl`,
 `data/reviews.jsonl`, `data/flags.jsonl`) are imported once, after the first `up`. Run the
 importer as a one-shot container from the server image, with the old folder mounted read-only
-(it must be below `$HOME`, which Colima mounts):
+(it must be below `$HOME`, which Colima mounts). The importer takes the subject the cards go to:
 
 ```sh
 source .env && docker compose run --rm --no-deps \
   -v <flashcards folder>:/import:ro \
-  pocket-learning-migrate node --enable-source-maps dist/import.js /import
+  pocket-learning-migrate node --enable-source-maps dist/import.js tulu /import
 ```
 
 Running it again adds nothing.
+
+## Subjects and charters
+
+Since 0.4.0 the learner has any number of subjects, each with a versioned **charter** (goal,
+scope, level, teaching style, card guidance) that the coach reads in every session. A subject
+from before 0.4.0 has no charter: its review and chats work, its lessons stay locked until a
+charter is approved on its Charter screen in the web app.
 
 ## The learning coach
 
