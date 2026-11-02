@@ -147,10 +147,12 @@ render_agent() {
       -e "s|__BREW_PREFIX__|$(brew --prefix)|g" \
       -e "s|__HOME__|$HOME|g" \
       "$TEMPLATE" > "$AGENT"
-  # Optional settings, only when set; plutil escapes the values. The token makes the plist a secret.
+  # Optional settings, only when set; plutil escapes the values. The tokens make the plist a secret.
   chmod 600 "$AGENT"
   local name
-  for name in COMMS_GITEA_URL COMMS_GITEA_TOKEN COMMS_GITEA_HOSTS; do
+  for name in COMMS_GITEA_URL COMMS_GITEA_TOKEN COMMS_GITEA_HOSTS \
+    COMMS_STATE_DIR COMMS_BRAINSTORM_PROVIDER COMMS_BRAINSTORM_MODEL COMMS_BRAINSTORM_API_KEY \
+    COMMS_BRAINSTORM_THINKING COMMS_PI_AUTH_FILE; do
     if [[ -n "${!name:-}" ]]; then
       plutil -insert "EnvironmentVariables.$name" -string "${!name}" "$AGENT"
     fi
