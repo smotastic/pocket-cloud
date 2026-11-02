@@ -18,8 +18,9 @@ and no runtime data (that lives under `DATA_ROOT`, outside this repo).
 compose.yaml          # entry point, includes every stack
 mise.toml             # sets DOCKER_CONTEXT inside this repo
 AGENTS.md             # rules for coding agents (CLAUDE.md links here)
-launchd/              # launchd agent templates (Colima VM, daily backup, pocket-comms)
-scripts/              # install-autostart.sh, backup.sh, install-backup.sh, install-comms.sh
+launchd/              # launchd agent templates (Colima VM, daily backup, Mac disk metrics, pocket-comms)
+scripts/              # install-autostart.sh, backup.sh, install-backup.sh, disk-metrics.sh,
+                      # install-disk-metrics.sh, install-comms.sh
 native/
   pocket-comms/       # pocket-comms, runs on the host, not in the VM (notes only)
 .env.example          # copy to .env; DATA_ROOT, domains, ports
@@ -130,6 +131,17 @@ docker compose ps                    # what is running
 docker compose logs -f gitea         # follow one service
 docker compose pull && docker compose up -d   # apply image updates after bumping tags
 docker compose down                  # stop everything (data stays in DATA_ROOT)
+```
+
+## Mac disk alerts
+
+Alerts for the Colima VM's disks come from the observability stack on its own. The Mac's
+disk, which holds `DATA_ROOT`, needs a launchd agent that pushes its free space to Prometheus
+every minute (see [`stacks/observability/README.md`](stacks/observability/README.md#the-macs-disk)):
+
+```sh
+scripts/install-disk-metrics.sh          # once, with the observability stack running
+scripts/install-disk-metrics.sh status
 ```
 
 ## Backups

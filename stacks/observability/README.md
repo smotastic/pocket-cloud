@@ -5,7 +5,7 @@ OTLP and scrapes per-container CPU and memory from cAdvisor and Gitea's own
 metrics. Loki stores logs: Alloy tails the output of every container, and services
 can also push logs over OTLP. Grafana shows both. There are no traces (no Tempo).
 Alertmanager sends Prometheus alerts to Discord; so far they watch the Colima VM's
-disks (see [Alerts](#alerts)).
+disks and the Mac's own disk (see [Alerts](#alerts)).
 
 | | |
 |---|---|
@@ -179,12 +179,44 @@ keeps firing is repeated every 12 h.
 |---|---|
 | `VmDiskFilling` (warning) | a Colima VM disk (`/` or `/var/lib/docker`) is over 80 % full for 10 min |
 | `VmDiskAlmostFull` (critical) | the same disk is over 90 % full for 5 min; replaces the warning |
+| `MacDiskFilling` (warning) | the Mac's disk that holds `${DATA_ROOT}` is over 80 % full for 10 min |
+| `MacDiskAlmostFull` (critical) | the same disk is over 90 % full for 5 min; replaces the warning |
+| `MacDiskMetricsMissing` (warning) | no disk metrics from the Mac for 10 min |
 | `ScrapeTargetDown` (warning) | node-exporter, cAdvisor or Alertmanager can't be scraped for 5 min |
 
-The disk numbers come from node-exporter, which reads the VM's filesystems through a
+The VM's disk numbers come from node-exporter, which reads the VM's filesystems through a
 read-only mount of its `/`. `/var/lib/docker` is the VM's data disk with images,
-containers and build cache; `${DATA_ROOT}` is on the Mac and not covered. They count
-ext4's reserved blocks as used, so they read a few percent higher than `df`.
+containers and build cache. They count ext4's reserved blocks as used, so they read a
+few percent higher than `df`.
+
+### The Mac's disk
+
+`${DATA_ROOT}` is on the Mac, not in the VM. Inside the VM it is only the virtiofs mount,
+which reports a meaningless size (about 254 TB), so node-exporter can't watch it. Instead
+the launchd agent `dev.pocket-cloud.disk-metrics` runs
+[`scripts/disk-metrics.sh`](../../scripts/disk-metrics.sh) every minute: it reads
+`df -kP "$DATA_ROOT"` and pushes two gauges over OTLP to `127.0.0.1:${PROMETHEUS_PORT}`,
+with the job `mac-disk` and the label `mountpoint` (`/System/Volumes/Data`):
+
+| Metric | Meaning |
+|---|---|
+| `mac_filesystem_size_bytes` | size of the APFS container, shared by all its volumes |
+| `mac_filesystem_avail_bytes` | free space in it |
+
+Used is `1 - avail / size`, which also counts the other volumes (system, snapshots), so it
+reads a little higher than `df`'s *Capacity*. A push instead of a native node-exporter keeps
+the Mac free of another listening port and binary to pin; the price is that a stopped agent
+looks like no data, hence `MacDiskMetricsMissing`.
+
+```sh
+scripts/install-disk-metrics.sh            # push once, then every minute from login on
+scripts/install-disk-metrics.sh status     # agent state and the end of the log
+scripts/install-disk-metrics.sh run-now    # push once, in this shell
+```
+
+It needs Prometheus running and only `DATA_ROOT` and `PROMETHEUS_PORT` from `.env`, read on
+every run. Errors go to `~/Library/Logs/pocket-cloud/disk-metrics.log`; the log stays empty
+while all is well. A run while the VM is down fails and is retried a minute later.
 
 ### Set up the Discord webhook
 

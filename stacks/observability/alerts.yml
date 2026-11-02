@@ -30,8 +30,48 @@ groups:
             Builds and container writes fail once it is full. Free space now:
             `docker system df`, then `docker image prune` or `docker builder prune`.
 
+  - name: mac
+    rules:
+      # The Mac's disk that holds ${DATA_ROOT}, pushed every minute by
+      # scripts/disk-metrics.sh. On APFS the size is the whole container's.
+      - alert: MacDiskFilling
+        expr: |
+          1 - mac_filesystem_avail_bytes{job="mac-disk"}
+            / mac_filesystem_size_bytes{job="mac-disk"} > 0.80
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Mac disk {{ $labels.mountpoint }} is {{ $value | humanizePercentage }} full
+          description: >-
+            Service data and the Colima VM's disk images live here. Check
+            `du -sh "$DATA_ROOT"/* ~/.colima`.
+
+      - alert: MacDiskAlmostFull
+        expr: |
+          1 - mac_filesystem_avail_bytes{job="mac-disk"}
+            / mac_filesystem_size_bytes{job="mac-disk"} > 0.90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: Mac disk {{ $labels.mountpoint }} is {{ $value | humanizePercentage }} full
+          description: >-
+            Databases, Gitea and the backups fail once it is full. Free space now, starting with
+            `du -sh "$DATA_ROOT"/*`.
+
   - name: monitoring
     rules:
+      # The Mac's disk metrics are pushed, not scraped; a stopped agent would
+      # otherwise silently stop the alerts above.
+      - alert: MacDiskMetricsMissing
+        expr: absent_over_time(mac_filesystem_avail_bytes{job="mac-disk"}[10m])
+        labels:
+          severity: warning
+        annotations:
+          summary: No disk metrics from the Mac for 10 minutes
+          description: "`scripts/install-disk-metrics.sh status` and `scripts/install-disk-metrics.sh run-now`."
+
       # Without this, a dead exporter would silently stop the alerts above.
       - alert: ScrapeTargetDown
         expr: up{job=~"node-exporter|cadvisor|alertmanager"} == 0
