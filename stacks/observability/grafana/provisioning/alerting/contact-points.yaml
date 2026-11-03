@@ -1,0 +1,19 @@
+apiVersion: 1
+
+# Grafana-managed alerts (pocket-home's ingestor rules) go to the same Discord channel as
+# Alertmanager's. The webhook URL is the compose secret from .env, read from its file.
+contactPoints:
+  - orgId: 1
+    name: discord
+    receivers:
+      - uid: discord
+        type: discord
+        settings:
+          url: $__file{/run/secrets/alerts_discord_webhook_url}
+          use_discord_username: false
+
+# Replaces Grafana's whole notification policy tree: everything goes to Discord.
+policies:
+  - orgId: 1
+    receiver: discord
+    group_by: [grafana_folder, alertname]
