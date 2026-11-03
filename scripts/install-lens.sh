@@ -124,7 +124,6 @@ render_agent() {
   local label="$1" agent="$HOME/Library/LaunchAgents/$1.plist"
   mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Logs/pocket-cloud"
   sed -e "s|__LENS_DIR__|$LENS_DIR|g" \
-      -e "s|__UV__|$(command -v uv)|g" \
       -e "s|__EMBEDDER_PORT__|$EMBEDDER_PORT|g" \
       -e "s|__BREW_PREFIX__|$(brew --prefix)|g" \
       -e "s|__HOME__|$HOME|g" \
