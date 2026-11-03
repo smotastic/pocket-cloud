@@ -10,14 +10,11 @@
 	<string>dev.pocket-cloud.lens-embedder</string>
 	<!-- Text embeddings for the gallery's search. launchd holds the socket and starts the worker
 	     on the first connection; the worker exits after 15 idle minutes (pocket-lens ADR 0013). -->
+	<!-- The worker's own entry point, not `uv run`: launch_activate_socket only hands the socket to
+	     the process launchd started, and uv would start the worker as its child. -->
 	<key>ProgramArguments</key>
 	<array>
-		<string>__UV__</string>
-		<string>run</string>
-		<string>--frozen</string>
-		<string>--project</string>
-		<string>__LENS_DIR__/current/apps/lens-embedder</string>
-		<string>lens-embedder</string>
+		<string>__LENS_DIR__/current/apps/lens-embedder/.venv/bin/lens-embedder</string>
 		<string>serve</string>
 	</array>
 	<key>Sockets</key>
