@@ -62,3 +62,15 @@ services:
       - ./serve/lens.json:/config/serve.json:ro
     depends_on:
       - pocket-lens-web
+
+  tailscale-home:
+    <<: *tailscale
+    container_name: tailscale-home
+    environment:
+      <<: *tailscale-env
+      TS_HOSTNAME: home
+    volumes:
+      - ${DATA_ROOT}/tailscale/home:/var/lib/tailscale
+      - ./serve/home.json:/config/serve.json:ro
+    depends_on:
+      - pocket-home-web

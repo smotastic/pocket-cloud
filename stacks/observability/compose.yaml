@@ -113,8 +113,12 @@ services:
       # Only applied when Grafana creates its database on the first start.
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
       GF_AUTH_ANONYMOUS_ENABLED: "false"
+    # For the Discord contact point in grafana/provisioning/alerting/.
+    secrets:
+      - alerts_discord_webhook_url
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
       - ${DATA_ROOT}/observability/grafana:/var/lib/grafana
     ports:
       - ${GRAFANA_HTTP_PORT}:3000
@@ -126,7 +130,7 @@ configs:
   gitea-metrics-token:
     content: ${GITEA_METRICS_TOKEN:-unset}
 
-# Mounted as files under /run/secrets/ in the alertmanager container.
+# Mounted as files under /run/secrets/ in the alertmanager and grafana containers.
 secrets:
   alerts_discord_webhook_url:
     environment: ALERTS_DISCORD_WEBHOOK_URL

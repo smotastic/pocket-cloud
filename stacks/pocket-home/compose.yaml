@@ -8,35 +8,53 @@ services:
       POCKET_HOME_MQTT_GATEWAY_PASSWORD: ${POCKET_HOME_MQTT_GATEWAY_PASSWORD}
       POCKET_HOME_MQTT_INGESTOR_USER: ${POCKET_HOME_MQTT_INGESTOR_USER}
       POCKET_HOME_MQTT_INGESTOR_PASSWORD: ${POCKET_HOME_MQTT_INGESTOR_PASSWORD}
-    # Rebuild the password file from .env on every start, so .env is the only place
-    # users are managed. mosquitto_passwd stores salted hashes, never the passwords.
+      POCKET_HOME_MQTT_GATEWAY_TOPIC_PREFIX: ${POCKET_HOME_MQTT_GATEWAY_TOPIC_PREFIX:?set it in .env, see stacks/pocket-home/README.md}
+    # Rebuild the password file and the ACL from .env on every start, so .env is the only
+    # place users are managed. mosquitto_passwd stores salted hashes, never the passwords.
+    # The ACL follows the ingestor's deploy contract; the ingestor's client id is its
+    # default, pocket-home-ingestor.
     entrypoint:
       - sh
       - -euc
       - |
-        f=/mosquitto/config/passwd
+        c=/mosquitto/config
+        for x in ca.crt broker.crt broker.key; do
+          [ -f "$$c/certs/$$x" ] || { echo "$$c/certs/$$x missing: run scripts/pocket-home-mqtt-certs.sh" >&2; exit 1; }
+        done
+        f=$$c/passwd
         rm -f "$$f"
         mosquitto_passwd -c -b "$$f" "$$POCKET_HOME_MQTT_GATEWAY_USER" "$$POCKET_HOME_MQTT_GATEWAY_PASSWORD"
         mosquitto_passwd -b "$$f" "$$POCKET_HOME_MQTT_INGESTOR_USER" "$$POCKET_HOME_MQTT_INGESTOR_PASSWORD"
-        chown mosquitto:mosquitto "$$f" /mosquitto/data
-        chmod 0700 "$$f"
+        p=$$POCKET_HOME_MQTT_GATEWAY_TOPIC_PREFIX
+        cat > "$$c/acl" <<EOF
+        user $$POCKET_HOME_MQTT_GATEWAY_USER
+        topic readwrite $$p/#
+        topic write pocket-home-ingestor-rpc/rpc
+
+        user $$POCKET_HOME_MQTT_INGESTOR_USER
+        topic write $$p/rpc
+        topic read +/events/rpc
+        topic read +/online
+        topic read pocket-home-ingestor-rpc/rpc
+        EOF
+        chown mosquitto:mosquitto "$$f" "$$c/acl" "$$c/certs/broker.key" /mosquitto/data
+        chmod 0700 "$$f" "$$c/acl"
+        chmod 0600 "$$c/certs/broker.key"
         exec mosquitto -c /mosquitto/mosquitto.conf
     volumes:
       - ./mosquitto.conf:/mosquitto/mosquitto.conf:ro
       - ${DATA_ROOT}/pocket-home/mosquitto/config:/mosquitto/config
       - ${DATA_ROOT}/pocket-home/mosquitto/data:/mosquitto/data
     ports:
-      # Plain MQTT on the LAN for the Shelly BLU Gateway; the ingestor connects over the
-      # container network.
+      # Plain MQTT on the LAN for the Shelly BLU Gateway, and MQTT over TLS for when it
+      # moves to TLS. The ingestor connects over TLS on the container network.
       - ${POCKET_HOME_MQTT_PORT}:1883
+      - ${POCKET_HOME_MQTTS_PORT}:8883
 
-  # The services below need pocket-home's first release (ingestor-v*, home-web-v*). Until
-  # then they sit in the `pocket-home` profile, so a plain `docker compose up -d` skips them.
   pocket-home-postgres:
     image: postgres:17.11-alpine
     container_name: pocket-home-postgres
     restart: unless-stopped
-    profiles: [pocket-home]
     environment:
       POSTGRES_USER: pocket-home
       POSTGRES_DB: pocket-home
@@ -52,10 +70,9 @@ services:
 
   # One-shot: applies pending migrations on every `up`, then exits.
   pocket-home-migrate:
-    image: ${GITEA_REGISTRY}/smotastic/ingestor:${POCKET_HOME_INGESTOR_VERSION}
+    image: ${GITEA_REGISTRY}/smotastic/home-server:${POCKET_HOME_SERVER_VERSION}
     container_name: pocket-home-migrate
     restart: "no"
-    profiles: [pocket-home]
     command: [node, --enable-source-maps, dist/migrate.js]
     environment:
       DATABASE_URL: postgres://pocket-home:${POCKET_HOME_DB_PASSWORD}@pocket-home-postgres:5432/pocket-home
@@ -65,14 +82,15 @@ services:
 
   # One instance only: the broker keeps its persistent session under one client id.
   pocket-home-ingestor:
-    image: ${GITEA_REGISTRY}/smotastic/ingestor:${POCKET_HOME_INGESTOR_VERSION}
+    image: ${GITEA_REGISTRY}/smotastic/home-server:${POCKET_HOME_SERVER_VERSION}
     container_name: pocket-home-ingestor
     restart: unless-stopped
-    profiles: [pocket-home]
     environment:
       PORT: "3000"
       DATABASE_URL: postgres://pocket-home:${POCKET_HOME_DB_PASSWORD}@pocket-home-postgres:5432/pocket-home
-      MQTT_URL: mqtt://pocket-home-mosquitto:1883
+      # The broker certificate names pocket-home-mosquitto; the ingestor checks it.
+      MQTT_URL: mqtts://pocket-home-mosquitto:8883
+      MQTT_TLS_CA_FILE: /run/pocket-home/mqtt-ca.crt
       MQTT_USERNAME: ${POCKET_HOME_MQTT_INGESTOR_USER}
       MQTT_PASSWORD: ${POCKET_HOME_MQTT_INGESTOR_PASSWORD}
       API_TOKEN: ${POCKET_HOME_API_TOKEN}
@@ -83,9 +101,12 @@ services:
       TELEGRAM_CHAT_ID: ${POCKET_HOME_TELEGRAM_CHAT_ID:-}
       HISTORY_RETENTION_DAYS: ${POCKET_HOME_HISTORY_RETENTION_DAYS:-}
       # Metrics only: Prometheus accepts no traces or logs. The service name stays the
-      # default `ingestor-server`, the job pocket-home's dashboard and alerts expect.
+      # default `home-server`, the job pocket-home's dashboard and alerts expect.
       OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: http://prometheus:9090/api/v1/otlp/v1/metrics
-      OTEL_RESOURCE_ATTRIBUTES: service.version=${POCKET_HOME_INGESTOR_VERSION},deployment.environment.name=production
+      OTEL_RESOURCE_ATTRIBUTES: service.version=${POCKET_HOME_SERVER_VERSION},deployment.environment.name=production
+    volumes:
+      # The CA certificate only; its key never leaves ${DATA_ROOT}/pocket-home/mqtt-ca.
+      - ${DATA_ROOT}/pocket-home/mosquitto/config/certs/ca.crt:/run/pocket-home/mqtt-ca.crt:ro
     depends_on:
       pocket-home-migrate:
         condition: service_completed_successfully
@@ -103,7 +124,6 @@ services:
     image: ${GITEA_REGISTRY}/smotastic/home-web:${POCKET_HOME_WEB_VERSION}
     container_name: pocket-home-web
     restart: unless-stopped
-    profiles: [pocket-home]
     environment:
       INGESTOR_HOST: pocket-home-ingestor
       INGESTOR_PORT: "3000"

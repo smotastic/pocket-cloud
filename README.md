@@ -20,7 +20,7 @@ mise.toml             # sets DOCKER_CONTEXT inside this repo
 AGENTS.md             # rules for coding agents (CLAUDE.md links here)
 launchd/              # launchd agent templates (Colima VM, daily backup, Mac disk metrics, pocket-comms)
 scripts/              # install-autostart.sh, backup.sh, install-backup.sh, disk-metrics.sh,
-                      # install-disk-metrics.sh, install-comms.sh
+                      # install-disk-metrics.sh, install-comms.sh, pocket-home-mqtt-certs.sh
 native/
   pocket-comms/       # pocket-comms, runs on the host, not in the VM (notes only)
 .env.example          # copy to .env; DATA_ROOT, domains, ports
@@ -83,7 +83,7 @@ cp .env.example .env            # adjust if needed
 source .env && mkdir -p "$DATA_ROOT"/gitea/{data,config} "$DATA_ROOT"/observability/{grafana,prometheus,loki,alloy,alertmanager} \
   "$DATA_ROOT"/docmost/{storage,postgres} "$DATA_ROOT"/pocket-galaxy/{postgres,assets} \
   "$DATA_ROOT"/pocket-home/{mosquitto/config,mosquitto/data,postgres} "$DATA_ROOT"/pocket-learning/postgres \
-  "$DATA_ROOT"/tailscale/{galaxy,docmost,learning}
+  "$DATA_ROOT"/tailscale/{galaxy,docmost,learning,home}
 docker compose up -d
 ```
 
@@ -161,7 +161,7 @@ scripts/install-backup.sh         # run daily at 03:30 via launchd
 
 scripts/backup.sh run             # back up now
 scripts/backup.sh snapshots       # list snapshots
-scripts/backup.sh restore-test    # restore latest to a temp dir, check SQLite, git fsck, Docmost's, Pocket Galaxy's and pocket-learning's Postgres
+scripts/backup.sh restore-test    # restore latest to a temp dir, check SQLite, git fsck, Docmost's, Pocket Galaxy's, pocket-learning's and pocket-home's Postgres
 scripts/install-backup.sh status  # agent state and the end of the log
 ```
 

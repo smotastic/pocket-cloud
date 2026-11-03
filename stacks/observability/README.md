@@ -46,6 +46,15 @@ edit a copy in the UI (*Save as*), export it as JSON and replace the file.
 | Container memory | Working set per app and per container, memory limits, OOM kills, VM total |
 | Gitea | Scrape status, repositories, open and closed issues, process memory |
 
+Apps ship their own dashboards: those live in
+[`grafana/dashboards/<app>/`](grafana/dashboards/), each folder with a provider in
+`grafana/provisioning/dashboards/<app>.yaml` that shows it in a Grafana folder of the same
+name. They are copied from the app's release tag and replaced on an upgrade, not edited here.
+
+| Folder | Dashboard | Source |
+|---|---|---|
+| pocket-home | Ingestor (`pocket-home-ingestor`) | pocket-home `apps/home-server/observability/grafana/dashboards/ingestor.json`, see [`../pocket-home/README.md`](../pocket-home/README.md#observability) |
+
 An *app* is the container name up to the first dash, two words for `pocket-*`:
 `bookmarks-server` → `bookmarks`, `pocket-galaxy-web` → `pocket-galaxy`. New stacks
 show up without changes as long as their containers follow that naming.
@@ -189,6 +198,18 @@ read-only mount of its `/`. `/var/lib/docker` is the VM's data disk with images,
 containers and build cache. They count ext4's reserved blocks as used, so they read a
 few percent higher than `df`.
 
+### Grafana-managed alerts
+
+Apps that ship Grafana alert rules get them provisioned from
+[`grafana/provisioning/alerting/`](grafana/provisioning/alerting/), so far pocket-home's
+ingestor (`ingestor.yaml`, rule group `ingestor` in the folder `pocket-home`, see
+[`../pocket-home/README.md`](../pocket-home/README.md#observability)). Grafana evaluates them
+itself, not Prometheus, and sends them through
+[`contact-points.yaml`](grafana/provisioning/alerting/contact-points.yaml) to the same Discord
+webhook, read from the compose secret. That file replaces Grafana's whole notification policy
+tree; rules and contact points can't be edited in the UI. After a change,
+`docker compose up -d --force-recreate grafana`. They are under *Alerting* → *Alert rules*.
+
 ### The Mac's disk
 
 `${DATA_ROOT}` is on the Mac, not in the VM. Inside the VM it is only the virtiofs mount,
@@ -226,7 +247,7 @@ while all is well. A run while the VM is down fails and is retried a minute late
    e.g. `pocket-cloud`, and *Copy Webhook URL*.
 3. Put the URL into `ALERTS_DISCORD_WEBHOOK_URL` in `.env`. It is a secret: anyone with
    it can post to the channel. If it leaks, delete the webhook and create a new one.
-4. `docker compose up -d --force-recreate alertmanager`. Compose writes the value to
+4. `docker compose up -d --force-recreate alertmanager grafana`. Compose writes the value to
    `/run/secrets/` when it creates the container, so a changed `.env` needs a recreate.
 5. So that alerts reach your phone: in the Discord app, long-press the channel →
    *Notification Settings* → *All Messages*, and don't mute the channel or server.

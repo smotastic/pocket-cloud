@@ -148,7 +148,7 @@ restore_test() {
   # Below $HOME, which Colima mounts, so a container can start on the restored
   # Postgres data. Global, so the EXIT trap can still see it after the function returns.
   RESTORE_TARGET="$(mktemp -d "$HOME/.pocket-cloud-restore.XXXXXX")"
-  trap 'docker rm -f docmost-restore-test pocket-galaxy-restore-test pocket-learning-restore-test >/dev/null 2>&1; rm -rf "$RESTORE_TARGET"' EXIT
+  trap 'docker rm -f docmost-restore-test pocket-galaxy-restore-test pocket-learning-restore-test pocket-home-restore-test >/dev/null 2>&1; rm -rf "$RESTORE_TARGET"' EXIT
   local target="$RESTORE_TARGET"
 
   log "Restoring latest snapshot to $target"
@@ -223,6 +223,23 @@ restore_test() {
     exit 1
   fi
   log "pocket-learning database starts, $learning_counts"
+
+  local home_image home_counts=""
+  home_image="$(sed -n 's/^ *image: *\(postgres:.*\)$/\1/p' stacks/pocket-home/compose.yaml)"
+  docker run -d --name pocket-home-restore-test \
+    -v "$restored/pocket-home/postgres:/var/lib/postgresql/data" "$home_image" >/dev/null
+  for _ in {1..30}; do
+    home_counts="$(docker exec pocket-home-restore-test psql -U pocket-home -d pocket-home -tAc \
+      "SELECT (SELECT count(*) FROM ingestor.devices) || ' devices, ' || ((SELECT count(*) FROM ingestor.door_window_readings) + (SELECT count(*) FROM ingestor.thermostat_readings)) || ' readings'" \
+      2>/dev/null)" && break
+    sleep 1
+  done
+  if [[ -z "$home_counts" ]]; then
+    docker logs pocket-home-restore-test >&2
+    echo "Restored pocket-home database did not start." >&2
+    exit 1
+  fi
+  log "pocket-home database starts, $home_counts"
   log "Restore test done"
 }
 

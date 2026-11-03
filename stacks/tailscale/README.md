@@ -18,6 +18,7 @@ No Funnel: nothing is reachable from the internet.
 | `galaxy` | `pocket-galaxy-web:8080` | [`serve/galaxy.json`](serve/galaxy.json) | `${DATA_ROOT}/tailscale/galaxy` |
 | `docmost` | `docmost:3000` | [`serve/docmost.json`](serve/docmost.json) | `${DATA_ROOT}/tailscale/docmost` |
 | `learning` | `pocket-learning-web:8080` | [`serve/learning.json`](serve/learning.json) | `${DATA_ROOT}/tailscale/learning` |
+| `home` | `pocket-home-web:8080` | [`serve/home.json`](serve/home.json) | `${DATA_ROOT}/tailscale/home` |
 
 ## How a sidecar works
 

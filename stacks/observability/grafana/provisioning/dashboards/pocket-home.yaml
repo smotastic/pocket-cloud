@@ -1,0 +1,13 @@
+apiVersion: 1
+
+# pocket-home's dashboards, copied from the pocket-home release tag that is deployed
+# (see stacks/pocket-home/README.md). Outside this folder, so the pocket-cloud provider
+# doesn't load them a second time.
+providers:
+  - name: pocket-home
+    folder: pocket-home
+    type: file
+    allowUiUpdates: false
+    updateIntervalSeconds: 60
+    options:
+      path: /etc/grafana/dashboards/pocket-home

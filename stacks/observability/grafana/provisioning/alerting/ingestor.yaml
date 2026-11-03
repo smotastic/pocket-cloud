@@ -1,0 +1,154 @@
+# Grafana-managed alert rules for the ingestor (ADR 0016). Grafana provisions this file from
+# /etc/grafana/provisioning/alerting/; the README of apps/ingestor-server says how. Each rule
+# queries the `prometheus` data source (A) and fires while the math expression C is not zero.
+# Where an alert goes is the contact point and notification policy of the Grafana that loads it.
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: ingestor
+    folder: pocket-home
+    interval: 1m
+    rules:
+      - uid: ingestor-battery-low
+        title: Battery low
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: ingestor_device_battery_percent unless on (device) (ingestor_device_ignored_ratio == 1)
+              instant: true
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: math
+              expression: $A <= 20
+        noDataState: OK
+        execErrState: Error
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Battery low: {{ $labels.device_kind }} {{ $labels.device }} is at {{ $values.A.Value }} %.'
+          description: >-
+            The battery of the device is at or below 20 %, the default of NOTIFY_BATTERY_PERCENT.
+            Ignored devices are left out.
+
+      - uid: ingestor-device-stale
+        title: Device stale
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: ingestor_device_stale_ratio unless on (device) (ingestor_device_ignored_ratio == 1)
+              instant: true
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: math
+              expression: $A > 0
+        noDataState: OK
+        execErrState: Error
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Device stale: {{ $labels.device_kind }} {{ $labels.device }} sends no readings.'
+          description: >-
+            The latest reading of the device is older than the stale time of its kind
+            (DEVICE_STALE_DOOR_WINDOW_MINUTES, DEVICE_STALE_THERMOSTAT_MINUTES). Check its battery
+            and its distance to the gateway. Ignored devices are left out.
+
+      - uid: ingestor-gateway-offline
+        title: Gateway offline
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: ingestor_gateway_online_ratio
+              instant: true
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: math
+              expression: $A < 1
+        noDataState: OK
+        execErrState: Error
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Gateway offline: {{ $labels.gateway }} is not connected to the broker.'
+          description: >-
+            The broker reports the gateway offline (its last will), so no device readings arrive.
+            Check the gateway's power and Wi-Fi.
+
+      - uid: ingestor-mqtt-disconnected
+        title: MQTT disconnected
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: ingestor_mqtt_connected_ratio
+              instant: true
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: math
+              expression: $A < 1
+        # No series at all means the ingestor sends no metrics: it is stopped or cannot reach
+        # Prometheus. That is as bad as a lost broker connection.
+        noDataState: Alerting
+        execErrState: Error
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'MQTT disconnected: the ingestor is not connected to the broker, or sends no metrics.'
+          description: >-
+            Either the ingestor lost its broker connection (check the broker and MQTT_URL,
+            MQTT_USERNAME, MQTT_PASSWORD), or no metrics arrive from it at all (check that the
+            service runs and OTEL_EXPORTER_OTLP_METRICS_ENDPOINT).
+
+      - uid: ingestor-ingestion-rejects
+        title: Ingestion rejects
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: sum by (job, reason) (increase(ingestor_messages_rejected_total[15m]))
+              instant: true
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: math
+              expression: $A > 0
+        noDataState: OK
+        execErrState: Error
+        for: 0s
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Ingestion rejects: {{ humanize $values.A.Value }} rejected as {{ $labels.reason }} in 15 minutes.'
+          description: >-
+            The ingestor could not ingest messages or device components. The warning log lines
+            "Gateway message rejected" name the topic, component or device.
