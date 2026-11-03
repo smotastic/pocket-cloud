@@ -70,7 +70,7 @@ services:
 
   # One-shot: applies pending migrations on every `up`, then exits.
   pocket-home-migrate:
-    image: ${GITEA_REGISTRY}/smotastic/ingestor:${POCKET_HOME_INGESTOR_VERSION}
+    image: ${GITEA_REGISTRY}/smotastic/home-server:${POCKET_HOME_SERVER_VERSION}
     container_name: pocket-home-migrate
     restart: "no"
     command: [node, --enable-source-maps, dist/migrate.js]
@@ -82,7 +82,7 @@ services:
 
   # One instance only: the broker keeps its persistent session under one client id.
   pocket-home-ingestor:
-    image: ${GITEA_REGISTRY}/smotastic/ingestor:${POCKET_HOME_INGESTOR_VERSION}
+    image: ${GITEA_REGISTRY}/smotastic/home-server:${POCKET_HOME_SERVER_VERSION}
     container_name: pocket-home-ingestor
     restart: unless-stopped
     environment:
@@ -101,9 +101,9 @@ services:
       TELEGRAM_CHAT_ID: ${POCKET_HOME_TELEGRAM_CHAT_ID:-}
       HISTORY_RETENTION_DAYS: ${POCKET_HOME_HISTORY_RETENTION_DAYS:-}
       # Metrics only: Prometheus accepts no traces or logs. The service name stays the
-      # default `ingestor-server`, the job pocket-home's dashboard and alerts expect.
+      # default `home-server`, the job pocket-home's dashboard and alerts expect.
       OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: http://prometheus:9090/api/v1/otlp/v1/metrics
-      OTEL_RESOURCE_ATTRIBUTES: service.version=${POCKET_HOME_INGESTOR_VERSION},deployment.environment.name=production
+      OTEL_RESOURCE_ATTRIBUTES: service.version=${POCKET_HOME_SERVER_VERSION},deployment.environment.name=production
     volumes:
       # The CA certificate only; its key never leaves ${DATA_ROOT}/pocket-home/mqtt-ca.
       - ${DATA_ROOT}/pocket-home/mosquitto/config/certs/ca.crt:/run/pocket-home/mqtt-ca.crt:ro
