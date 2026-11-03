@@ -53,7 +53,7 @@ name. They are copied from the app's release tag and replaced on an upgrade, not
 
 | Folder | Dashboard | Source |
 |---|---|---|
-| pocket-home | Ingestor (`pocket-home-ingestor`) | pocket-home `apps/ingestor-server/observability/grafana/dashboards/ingestor.json`, see [`../pocket-home/README.md`](../pocket-home/README.md#observability) |
+| pocket-home | Ingestor (`pocket-home-ingestor`) | pocket-home `apps/home-server/observability/grafana/dashboards/ingestor.json`, see [`../pocket-home/README.md`](../pocket-home/README.md#observability) |
 
 An *app* is the container name up to the first dash, two words for `pocket-*`:
 `bookmarks-server` → `bookmarks`, `pocket-galaxy-web` → `pocket-galaxy`. New stacks

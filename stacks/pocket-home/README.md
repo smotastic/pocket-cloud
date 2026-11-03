@@ -2,11 +2,11 @@
 
 [pocket-home](https://github.com/smotastic/pocket-home): the home's Shelly BLU devices.
 A Shelly BLU Gateway publishes the Door/Window sensors and TRVs it hears to the MQTT
-broker; the ingestor subscribes, stores their history in PostgreSQL, sets TRV targets,
+broker; the ingestor (in pocket-home's `home-server` app) subscribes, stores their history in PostgreSQL, sets TRV targets,
 runs window setback rules and sends Telegram notifications; the home web app is its UI.
 The images are built by Gitea Actions on a release tag and pulled from Gitea's container
 registry. The deploy contract is in pocket-home's
-[ingestor README](https://github.com/smotastic/pocket-home/blob/master/apps/ingestor-server/README.md#deploy-contract-pocket-cloud)
+[home-server README](https://github.com/smotastic/pocket-home/blob/master/apps/home-server/README.md#deploy-contract-pocket-cloud)
 and [home-web README](https://github.com/smotastic/pocket-home/blob/master/apps/home-web/README.md#deploy-contract).
 
 | | |
@@ -14,15 +14,15 @@ and [home-web README](https://github.com/smotastic/pocket-home/blob/master/apps/
 | Web app | http://\<mac-name\>.local:3005 (LAN, `POCKET_HOME_HTTP_PORT`), https://home.\<tailnet\>.ts.net (tailnet) |
 | API docs | http://\<mac-name\>.local:3005/docs |
 | MQTT | `<mac-name>.local:1883` (`POCKET_HOME_MQTT_PORT`), plain TCP, and `<mac-name>.local:8883` (`POCKET_HOME_MQTTS_PORT`), TLS; LAN only |
-| Versions | `POCKET_HOME_INGESTOR_VERSION`, `POCKET_HOME_WEB_VERSION` in `.env`; the two images are released apart |
+| Versions | `POCKET_HOME_SERVER_VERSION`, `POCKET_HOME_WEB_VERSION` in `.env`; the two images are released apart |
 | Data | `${DATA_ROOT}/pocket-home/mosquitto/{config,data}` (generated `passwd` and `acl`, `certs/`, `mosquitto.db`), `${DATA_ROOT}/pocket-home/mqtt-ca` (the broker's CA and its key), `${DATA_ROOT}/pocket-home/postgres` (PostgreSQL data directory) |
 
 | Service | Image | Role |
 |---|---|---|
 | `pocket-home-mosquitto` | `eclipse-mosquitto` | MQTT broker, ports 1883 and 8883 (TLS) published for the gateway. Config in [`mosquitto.conf`](mosquitto.conf), mounted read-only. |
 | `pocket-home-web` | `home-web` | nginx: serves the web app, proxies `/api`, `/docs`, `/health` to the ingestor. The only published HTTP port. |
-| `pocket-home-ingestor` | `ingestor` | API on port 3000, internal only, and the MQTT subscriber. One instance only: the broker keeps its session under one client id. |
-| `pocket-home-migrate` | `ingestor` | Runs the migrations on every `up`, then exits. The ingestor starts only after it succeeds. |
+| `pocket-home-ingestor` | `home-server` | API on port 3000, internal only, and the MQTT subscriber. One instance only: the broker keeps its session under one client id. |
+| `pocket-home-migrate` | `home-server` | Runs the migrations on every `up`, then exits. The ingestor starts only after it succeeds. |
 | `pocket-home-postgres` | `postgres` | Database, schema `ingestor`. Internal only. |
 
 ## Broker users
@@ -66,7 +66,7 @@ prefix changed in `.env` and a broker restart.
    - choose the two broker user names and generate their passwords with
      `openssl rand -hex 24`, and set `POCKET_HOME_MQTT_GATEWAY_TOPIC_PREFIX` (see
      [ACL](#acl));
-   - set `POCKET_HOME_INGESTOR_VERSION` and `POCKET_HOME_WEB_VERSION` (e.g. `0.1.0`);
+   - set `POCKET_HOME_SERVER_VERSION` and `POCKET_HOME_WEB_VERSION` (e.g. `0.2.0`);
    - generate `POCKET_HOME_DB_PASSWORD` with `openssl rand -hex 32`. It goes into
      `DATABASE_URL`, so it must only contain URL-safe characters. Postgres only applies it
      when it initialises an empty data directory;
@@ -165,9 +165,9 @@ Sessions of clients gone for more than 14 days are dropped.
 
 ## Updating
 
-A release in pocket-home is a git tag `ingestor-vX.Y.Z` or `home-web-vX.Y.Z`, which pushes
-that image as `X.Y.Z`. Read the ingestor README's "Before upgrading" notes first. For an
-ingestor release, copy its dashboard and alert rules from the same tag (see
+A release in pocket-home is a git tag `home-server-vX.Y.Z` or `home-web-vX.Y.Z`, which pushes
+that image as `X.Y.Z`. Read the home-server README's "Before upgrading" notes first. For a
+home-server release, copy its dashboard and alert rules from the same tag (see
 [Observability](#observability)). Set the version in `.env` and run:
 
 ```sh
@@ -176,13 +176,21 @@ docker compose up -d pocket-home-web
 
 Migrations run before the new ingestor starts; running them twice changes nothing.
 
+**From `ingestor-v0.1.0`.** pocket-home renamed its server app to `home-server` (its ADR 0017):
+releases up to `ingestor-v0.1.0` are the image `ingestor`, later ones the image `home-server`.
+On the first `home-server-vX.Y.Z` upgrade, rename `POCKET_HOME_INGESTOR_VERSION` in `.env` to
+`POCKET_HOME_SERVER_VERSION` and set it to the new version. The metrics' `job` changes from
+`ingestor-server` to `home-server`; the dashboard's job variable picks it up, and the alert rules
+do not filter by job.
+
 The broker: change its tag in `compose.yaml`, then `docker compose up -d pocket-home-mosquitto`.
 Release notes: https://mosquitto.org/blog/
 
 ## Observability
 
-The ingestor sends metrics to Prometheus over OTLP under the job `ingestor-server`. Its
-Grafana dashboard and alert rules ship with each release (`apps/ingestor-server/observability/grafana/`
+The ingestor sends metrics to Prometheus over OTLP under the job `home-server` (`ingestor-server`
+up to `ingestor-v0.1.0`). Its Grafana dashboard and alert rules ship with each release
+(`apps/home-server/observability/grafana/`
 in pocket-home) and are provisioned from copies in the observability stack:
 
 | pocket-home file | Copied to |
@@ -190,7 +198,7 @@ in pocket-home) and are provisioned from copies in the observability stack:
 | `dashboards/ingestor.json` | [`../observability/grafana/dashboards/pocket-home/ingestor.json`](../observability/grafana/dashboards/pocket-home/ingestor.json) |
 | `alerting/ingestor.yaml` | [`../observability/grafana/provisioning/alerting/ingestor.yaml`](../observability/grafana/provisioning/alerting/ingestor.yaml) |
 
-They are from `ingestor-v0.1.0`. On an ingestor upgrade, copy both from the new tag, so the
+They are from `ingestor-v0.1.0`. On a home-server upgrade, copy both from the new tag, so the
 dashboard queries the metrics that image exports, and run
 `docker compose up -d --force-recreate grafana`. The dashboard is *Dashboards* → *pocket-home*
 → *Ingestor*; the five rules (battery low, device stale, gateway offline, MQTT disconnected,
