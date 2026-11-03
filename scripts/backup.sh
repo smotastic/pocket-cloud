@@ -21,7 +21,8 @@ export RESTIC_PASSWORD_FILE="${RESTIC_PASSWORD_FILE:-$HOME/.config/pocket-cloud/
 # Stopped for the snapshot and started again afterwards, in this order.
 SERVICES=(gitea-runner gitea bookmarks-server bookmarks-postgres docmost docmost-postgres
   pocket-galaxy-server pocket-galaxy-postgres pocket-home-ingestor pocket-home-postgres
-  pocket-home-mosquitto pocket-learning-server pocket-learning-postgres)
+  pocket-home-mosquitto pocket-learning-server pocket-learning-postgres pocket-lens-server
+  pocket-lens-postgres)
 EXCLUDES=(
   "$DATA_ROOT/gitea-runner/data/cache"
   # Metrics and logs are high-churn and low-value; Grafana's DB next to them is kept.
@@ -29,6 +30,9 @@ EXCLUDES=(
   "$DATA_ROOT/observability/loki"
   # pocket-comms' checkout and builds; no state, rebuilt by scripts/install-comms.sh.
   "$DATA_ROOT/pocket-comms"
+  # pocket-lens: previews and thumbnails are rebuilt from the originals; the host builds from git.
+  "$DATA_ROOT/pocket-lens/library/cache"
+  "$DATA_ROOT/pocket-lens/host"
 )
 KEEP=(--keep-daily 7 --keep-weekly 4 --keep-monthly 12)
 TAG=pocket-cloud

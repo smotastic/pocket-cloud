@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Template. scripts/install-lens.sh replaces the __PLACEHOLDERS__ and
+  installs the result to ~/Library/LaunchAgents/. Do not load this file directly.
+-->
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>dev.pocket-cloud.lens-embedder</string>
+	<!-- Text embeddings for the gallery's search. launchd holds the socket and starts the worker
+	     on the first connection; the worker exits after 15 idle minutes (pocket-lens ADR 0013). -->
+	<key>ProgramArguments</key>
+	<array>
+		<string>__UV__</string>
+		<string>run</string>
+		<string>--frozen</string>
+		<string>--project</string>
+		<string>__LENS_DIR__/current/apps/lens-embedder</string>
+		<string>lens-embedder</string>
+		<string>serve</string>
+	</array>
+	<key>Sockets</key>
+	<dict>
+		<key>Listener</key>
+		<dict>
+			<!-- Loopback only; the VM reaches it as host.lima.internal. -->
+			<key>SockNodeName</key>
+			<string>127.0.0.1</string>
+			<key>SockServiceName</key>
+			<string>__EMBEDDER_PORT__</string>
+		</dict>
+	</dict>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>__BREW_PREFIX__/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+	</dict>
+	<key>StandardOutPath</key>
+	<string>__HOME__/Library/Logs/pocket-cloud/lens-embedder.log</string>
+	<key>StandardErrorPath</key>
+	<string>__HOME__/Library/Logs/pocket-cloud/lens-embedder.log</string>
+</dict>
+</plist>
