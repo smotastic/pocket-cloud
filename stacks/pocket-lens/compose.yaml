@@ -1,0 +1,75 @@
+services:
+  pocket-lens-postgres:
+    image: postgres:17.11-alpine
+    container_name: pocket-lens-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pocket-lens
+      POSTGRES_DB: pocket-lens
+      # Only applied when Postgres initialises an empty data directory.
+      POSTGRES_PASSWORD: ${POCKET_LENS_DB_PASSWORD}
+    volumes:
+      - ${DATA_ROOT}/pocket-lens/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U pocket-lens -d pocket-lens]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # One-shot: applies pending migrations on every `up`, then exits.
+  pocket-lens-migrate:
+    image: ${GITEA_REGISTRY}/smotastic/photos-server:${POCKET_LENS_VERSION}
+    container_name: pocket-lens-migrate
+    restart: "no"
+    command: [node, --enable-source-maps, dist/migrate.js]
+    environment:
+      DATABASE_URL: postgres://pocket-lens:${POCKET_LENS_DB_PASSWORD}@pocket-lens-postgres:5432/pocket-lens
+    depends_on:
+      pocket-lens-postgres:
+        condition: service_healthy
+
+  pocket-lens-server:
+    image: ${GITEA_REGISTRY}/smotastic/photos-server:${POCKET_LENS_VERSION}
+    container_name: pocket-lens-server
+    restart: unless-stopped
+    environment:
+      PORT: "3000"
+      DATABASE_URL: postgres://pocket-lens:${POCKET_LENS_DB_PASSWORD}@pocket-lens-postgres:5432/pocket-lens
+      # The library from the host, read-only: the host CLI is its only writer.
+      LENS_LIBRARY_ROOT: /library
+      LENS_INGEST_TOKEN: ${POCKET_LENS_INGEST_TOKEN}
+      LENS_ALLOWED_LOGIN: ${POCKET_LENS_ALLOWED_LOGIN}
+      LENS_BACKUP: ${POCKET_LENS_BACKUP:-none}
+      LENS_TIME_ZONE: ${POCKET_LENS_TIME_ZONE:-Europe/Berlin}
+      # lens-embedder serve on the host's loopback, reached through the Lima gateway.
+      LENS_EMBEDDER_URL: http://host.lima.internal:${POCKET_LENS_EMBEDDER_PORT:-4421}
+      OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: http://prometheus:9090/api/v1/otlp/v1/metrics
+      OTEL_SERVICE_NAME: pocket-lens
+      OTEL_RESOURCE_ATTRIBUTES: service.version=${POCKET_LENS_VERSION},deployment.environment.name=production
+    volumes:
+      - ${DATA_ROOT}/pocket-lens/library:/library:ro
+    # The host CLI's door to the ingest group: loopback only, never the LAN.
+    ports:
+      - 127.0.0.1:${POCKET_LENS_API_PORT:-4420}:3000
+    depends_on:
+      pocket-lens-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://localhost:3000/health/ready').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+  # nginx: the web app, and /api, /files, /docs and /health proxied to the server. No published
+  # port: only tailscale-lens reaches it, so the Tailscale-User-Login header can't be forged.
+  pocket-lens-web:
+    image: ${GITEA_REGISTRY}/smotastic/photos-web:${POCKET_LENS_VERSION}
+    container_name: pocket-lens-web
+    restart: unless-stopped
+    environment:
+      PHOTOS_SERVER_HOST: pocket-lens-server
+      PHOTOS_SERVER_PORT: "3000"
+    depends_on:
+      pocket-lens-server:
+        condition: service_started

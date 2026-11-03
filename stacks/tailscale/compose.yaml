@@ -50,3 +50,15 @@ services:
       - ./serve/learning.json:/config/serve.json:ro
     depends_on:
       - pocket-learning-web
+
+  tailscale-lens:
+    <<: *tailscale
+    container_name: tailscale-lens
+    environment:
+      <<: *tailscale-env
+      TS_HOSTNAME: lens
+    volumes:
+      - ${DATA_ROOT}/tailscale/lens:/var/lib/tailscale
+      - ./serve/lens.json:/config/serve.json:ro
+    depends_on:
+      - pocket-lens-web
