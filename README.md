@@ -18,9 +18,11 @@ and no runtime data (that lives under `DATA_ROOT`, outside this repo).
 compose.yaml          # entry point, includes every stack
 mise.toml             # sets DOCKER_CONTEXT inside this repo
 AGENTS.md             # rules for coding agents (CLAUDE.md links here)
-launchd/              # launchd agent templates (Colima VM, daily backup, Mac disk metrics, pocket-comms)
+launchd/              # launchd agent templates (Colima VM, daily backup, Mac disk metrics,
+                      # build cache prune, pocket-comms)
 scripts/              # install-autostart.sh, backup.sh, install-backup.sh, disk-metrics.sh,
-                      # install-disk-metrics.sh, install-comms.sh, pocket-home-mqtt-certs.sh
+                      # install-disk-metrics.sh, prune-build-cache.sh, install-build-cache-prune.sh,
+                      # install-comms.sh, pocket-home-mqtt-certs.sh
 native/
   pocket-comms/       # pocket-comms, runs on the host, not in the VM (notes only)
 .env.example          # copy to .env; DATA_ROOT, domains, ports
@@ -143,6 +145,45 @@ every minute (see [`stacks/observability/README.md`](stacks/observability/README
 scripts/install-disk-metrics.sh          # once, with the observability stack running
 scripts/install-disk-metrics.sh status
 ```
+
+## Build cache
+
+Gitea Actions builds images in the VM, and their BuildKit cache lands on the VM's data disk
+(`/var/lib/docker`). CI can add about 30 GB in three hours, which filled the disk twice.
+
+The Colima profile (`~/.colima/pocket-cloud/colima.yaml`, outside this repo) sets a GC policy:
+
+```yaml
+docker:
+  builder:
+    gc:
+      enabled: true
+      defaultMaxUsedSpace: 20GB
+      defaultMinFreeSpace: 15GB
+```
+
+`colima ssh -p pocket-cloud -- sudo docker buildx inspect` shows it loaded, but it doesn't cap
+the cache. With the containerd image store, BuildKit marks cache records of intermediate build
+stages as shared with an image as long as the stage's base image (e.g. `node`) exists, and GC
+skips shared records and doesn't count them
+([moby/buildkit#7352](https://github.com/moby/buildkit/issues/7352), fixed in BuildKit master
+but not yet in a Docker release). `docker buildx du` shows them as *Shared*. `docker builder prune --max-used-space`
+and `--keep-storage` skip them as well; only an age filter frees them.
+
+Until a Docker release has the fix, a launchd agent on the Mac prunes by age every 15 minutes:
+cache older than 2 h when the data disk is 70 % full or more, otherwise older than 12 h.
+Install it from the main checkout, since the agent runs the script from there:
+
+```sh
+scripts/install-build-cache-prune.sh           # once
+scripts/install-build-cache-prune.sh status    # agent state and the last runs
+scripts/install-build-cache-prune.sh run-now   # prune once
+```
+
+Logs go to `~/Library/Logs/pocket-cloud/build-cache-prune.log`. Keep the GC policy in the
+profile as well: it already caps the private records and will cap the rest once fixed.
+The `VmDisk*` alerts in [`stacks/observability`](stacks/observability/README.md#alerts)
+fire if the agent stops or can't keep up.
 
 ## Backups
 

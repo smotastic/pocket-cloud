@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Template. scripts/install-build-cache-prune.sh replaces the __PLACEHOLDERS__ and
+  installs the result to ~/Library/LaunchAgents/. Do not load this file directly.
+-->
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>dev.pocket-cloud.build-cache-prune</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/bash</string>
+		<string>__REPO_ROOT__/scripts/prune-build-cache.sh</string>
+	</array>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>__BREW_PREFIX__/bin:__BREW_PREFIX__/sbin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+	</dict>
+	<key>WorkingDirectory</key>
+	<string>__REPO_ROOT__</string>
+	<!-- At login and every 15 minutes after. -->
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StartInterval</key>
+	<integer>900</integer>
+	<key>StandardOutPath</key>
+	<string>__HOME__/Library/Logs/pocket-cloud/build-cache-prune.log</string>
+	<key>StandardErrorPath</key>
+	<string>__HOME__/Library/Logs/pocket-cloud/build-cache-prune.log</string>
+</dict>
+</plist>
