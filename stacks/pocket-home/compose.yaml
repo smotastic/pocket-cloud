@@ -96,9 +96,18 @@ services:
       API_TOKEN: ${POCKET_HOME_API_TOKEN}
       # The web app is plain HTTP on the LAN; a secure cookie would be dropped by browsers.
       API_COOKIE_SECURE: "false"
-      # Empty means unset: notifications and history retention stay off.
-      TELEGRAM_BOT_TOKEN: ${POCKET_HOME_TELEGRAM_BOT_TOKEN:-}
-      TELEGRAM_CHAT_ID: ${POCKET_HOME_TELEGRAM_CHAT_ID:-}
+      # Empty means unset: that notification destination and history retention stay off.
+      # Automations notify the notification webhook; their failures go to the channel of the
+      # Grafana alerts.
+      DISCORD_WEBHOOK_URL: ${POCKET_HOME_NOTIFICATION_WEBHOOK:-}
+      DISCORD_ERROR_WEBHOOK_URL: ${ALERTS_DISCORD_WEBHOOK_URL:-}
+      # The in-app assistant (pocket-home spec 022): Pi with the owner's login. Without provider and
+      # model it says it is not set up.
+      ASSISTANT_PROVIDER: ${POCKET_HOME_ASSISTANT_PROVIDER:-openai}
+      ASSISTANT_MODEL: ${POCKET_HOME_ASSISTANT_MODEL:-gpt-6-luna}
+      ASSISTANT_THINKING: ${POCKET_HOME_ASSISTANT_THINKING:-medium}
+      ASSISTANT_API_KEY: ${POCKET_HOME_ASSISTANT_API_KEY:-}
+      ASSISTANT_PI_AUTH_FILE: /pi/auth.json
       HISTORY_RETENTION_DAYS: ${POCKET_HOME_HISTORY_RETENTION_DAYS:-}
       # Metrics only: Prometheus accepts no traces or logs. The service name stays the
       # default `home-server`, the job pocket-home's dashboard and alerts expect.
@@ -107,6 +116,9 @@ services:
     volumes:
       # The CA certificate only; its key never leaves ${DATA_ROOT}/pocket-home/mqtt-ca.
       - ${DATA_ROOT}/pocket-home/mosquitto/config/certs/ca.crt:/run/pocket-home/mqtt-ca.crt:ro
+      # Pi's login, read-write: Pi writes refreshed OAuth tokens back under its own lock, as for
+      # pocket-learning's coach.
+      - ${POCKET_HOME_PI_AGENT_DIR:-${POCKET_LEARNING_PI_AGENT_DIR}}:/pi
     depends_on:
       pocket-home-migrate:
         condition: service_completed_successfully

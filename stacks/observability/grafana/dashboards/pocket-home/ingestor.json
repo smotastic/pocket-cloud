@@ -1040,7 +1040,7 @@
       "id": 19,
       "type": "timeseries",
       "title": "Notifications",
-      "description": "Notifications tried, by condition and outcome.",
+      "description": "Notification messages tried, by destination and outcome (spec 021). A failed one is tried again every minute.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -1058,10 +1058,10 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (condition, outcome) (increase(ingestor_notifications_sent_total{job=~\"$job\"}[$__rate_interval]))",
+          "expr": "sum by (destination, outcome) (increase(notification_messages_sent_total{job=~\"$job\"}[$__rate_interval]))",
           "range": true,
           "instant": false,
-          "legendFormat": "{{condition}} {{outcome}}"
+          "legendFormat": "{{destination}} {{outcome}}"
         }
       ],
       "fieldConfig": {
