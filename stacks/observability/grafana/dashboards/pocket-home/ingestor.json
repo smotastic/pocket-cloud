@@ -984,7 +984,7 @@
       "id": 18,
       "type": "timeseries",
       "title": "Automation actions",
-      "description": "Window transitions an automation rule acted on, by phase and outcome.",
+      "description": "Clauses the automations acted on, by trigger (time or windows) and outcome.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -1002,10 +1002,10 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (phase, outcome) (increase(ingestor_automation_actions_total{job=~\"$job\"}[$__rate_interval]))",
+          "expr": "sum by (trigger, outcome) (increase(automation_actions_total{job=~\"$job\"}[$__rate_interval]))",
           "range": true,
           "instant": false,
-          "legendFormat": "{{phase}} {{outcome}}"
+          "legendFormat": "{{trigger}} {{outcome}}"
         }
       ],
       "fieldConfig": {

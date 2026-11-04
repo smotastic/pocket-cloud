@@ -198,7 +198,7 @@ in pocket-home) and are provisioned from copies in the observability stack:
 | `dashboards/ingestor.json` | [`../observability/grafana/dashboards/pocket-home/ingestor.json`](../observability/grafana/dashboards/pocket-home/ingestor.json) |
 | `alerting/ingestor.yaml` | [`../observability/grafana/provisioning/alerting/ingestor.yaml`](../observability/grafana/provisioning/alerting/ingestor.yaml) |
 
-They are from `ingestor-v0.1.0`. On a home-server upgrade, copy both from the new tag, so the
+They are from `home-server-v0.3.0`. On a home-server upgrade, copy both from the new tag, so the
 dashboard queries the metrics that image exports, and run
 `docker compose up -d --force-recreate grafana`. The dashboard is *Dashboards* → *pocket-home*
 → *Ingestor*; the five rules (battery low, device stale, gateway offline, MQTT disconnected,
