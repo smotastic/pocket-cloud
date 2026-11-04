@@ -34,8 +34,8 @@ groups:
         annotations:
           summary: 'Battery low: {{ $labels.device_kind }} {{ $labels.device }} is at {{ $values.A.Value }} %.'
           description: >-
-            The battery of the device is at or below 20 %, the default of NOTIFY_BATTERY_PERCENT.
-            Ignored devices are left out.
+            The battery of the device is at or below 20 %. Ignored devices are left out. A
+            battery-low automation can also notify through Discord (spec 021).
 
       - uid: ingestor-device-stale
         title: Device stale
@@ -152,3 +152,33 @@ groups:
           description: >-
             The ingestor could not ingest messages or device components. The warning log lines
             "Gateway message rejected" name the topic, component or device.
+
+      - uid: notification-messages-failing
+        title: Notifications failing
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: sum by (job, destination) (increase(notification_messages_sent_total{outcome="failed"}[15m]))
+              instant: true
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: math
+              expression: $A > 0
+        noDataState: OK
+        execErrState: Error
+        # A failed message is tried every minute, so 15 minutes of failures is no passing hiccup.
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Notifications failing: messages to {{ $labels.destination }} are not sent.'
+          description: >-
+            Discord does not take the messages of the destination, and the later ones wait behind
+            the first (spec 021). The warning log lines "Notification not sent" give the reason;
+            check the webhook in DISCORD_WEBHOOK_URL or DISCORD_ERROR_WEBHOOK_URL.

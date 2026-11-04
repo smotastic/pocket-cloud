@@ -3,7 +3,7 @@
 [pocket-home](https://github.com/smotastic/pocket-home): the home's Shelly BLU devices.
 A Shelly BLU Gateway publishes the Door/Window sensors and TRVs it hears to the MQTT
 broker; the ingestor (in pocket-home's `home-server` app) subscribes, stores their history in PostgreSQL, sets TRV targets,
-runs window setback rules and sends Telegram notifications; the home web app is its UI.
+runs its automations and notifies through Discord; the home web app is its UI.
 The images are built by Gitea Actions on a release tag and pulled from Gitea's container
 registry. The deploy contract is in pocket-home's
 [home-server README](https://github.com/smotastic/pocket-home/blob/master/apps/home-server/README.md#deploy-contract-pocket-cloud)
@@ -72,8 +72,9 @@ prefix changed in `.env` and a broker restart.
      when it initialises an empty data directory;
    - generate `POCKET_HOME_API_TOKEN` with `openssl rand -base64 32` and keep it in the
      password manager: it signs in the web app and authorises every API call;
-   - optionally `POCKET_HOME_TELEGRAM_BOT_TOKEN` and `POCKET_HOME_TELEGRAM_CHAT_ID` (both
-     or neither, see the ingestor README, "Set up the bot");
+   - optionally `POCKET_HOME_NOTIFICATION_WEBHOOK`, the Discord webhook URL that automations
+     notify (see the home-server README, "Set up the webhooks"). Failed automations go to
+     `ALERTS_DISCORD_WEBHOOK_URL`, the channel of the Grafana alerts;
    - `POCKET_HOME_HISTORY_RETENTION_DAYS`: `730` keeps two heating seasons (the ingestor
      README's suggestion). Deleting is irreversible; take a database backup before lowering
      it. Empty keeps everything.
