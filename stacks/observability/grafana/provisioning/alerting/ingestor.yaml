@@ -1,5 +1,5 @@
 # Grafana-managed alert rules for the ingestor (ADR 0016). Grafana provisions this file from
-# /etc/grafana/provisioning/alerting/; the README of apps/ingestor-server says how. Each rule
+# /etc/grafana/provisioning/alerting/; the README of apps/home-server says how. Each rule
 # queries the `prometheus` data source (A) and fires while the math expression C is not zero.
 # Where an alert goes is the contact point and notification policy of the Grafana that loads it.
 apiVersion: 1
