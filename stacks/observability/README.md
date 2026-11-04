@@ -188,6 +188,7 @@ keeps firing is repeated every 12 h.
 |---|---|
 | `VmDiskFilling` (warning) | a Colima VM disk (`/` or `/var/lib/docker`) is over 80 % full for 10 min |
 | `VmDiskAlmostFull` (critical) | the same disk is over 90 % full for 5 min; replaces the warning |
+| `VmDiskFillingFast` (warning) | `/var/lib/docker` is over 60 % full and, at the rate of the last 30 min, full within 2 h, for 10 min |
 | `MacDiskFilling` (warning) | the Mac's disk that holds `${DATA_ROOT}` is over 80 % full for 10 min |
 | `MacDiskAlmostFull` (critical) | the same disk is over 90 % full for 5 min; replaces the warning |
 | `MacDiskMetricsMissing` (warning) | no disk metrics from the Mac for 10 min |
@@ -195,7 +196,8 @@ keeps firing is repeated every 12 h.
 
 The VM's disk numbers come from node-exporter, which reads the VM's filesystems through a
 read-only mount of its `/`. `/var/lib/docker` is the VM's data disk with images,
-containers and build cache. They count ext4's reserved blocks as used, so they read a
+containers and build cache; the build cache is pruned from the Mac, see
+[Build cache](../../README.md#build-cache). They count ext4's reserved blocks as used, so they read a
 few percent higher than `df`.
 
 ### Grafana-managed alerts

@@ -14,8 +14,9 @@ groups:
         annotations:
           summary: Colima VM disk {{ $labels.mountpoint }} is {{ $value | humanizePercentage }} full
           description: >-
-            Check `docker system df`; build cache is capped by BuildKit GC, so old image
-            tags are the likely cause (`docker image prune`).
+            Check `docker system df`. BuildKit GC doesn't cap the build cache, so check
+            `scripts/install-build-cache-prune.sh status`, then prune by age with
+            `docker builder prune -af --filter until=2h`.
 
       - alert: VmDiskAlmostFull
         expr: |
@@ -28,7 +29,25 @@ groups:
           summary: Colima VM disk {{ $labels.mountpoint }} is {{ $value | humanizePercentage }} full
           description: >-
             Builds and container writes fail once it is full. Free space now:
-            `docker system df`, then `docker image prune` or `docker builder prune`.
+            `docker builder prune -af --filter until=1h`, then `docker system df`.
+
+      # CI builds can add 10 GB of build cache in 20 minutes, so the fixed thresholds above
+      # leave little time. This fires on the trend first, while the disk is still over half
+      # empty; the 60 % floor keeps a single build from paging on an empty disk.
+      - alert: VmDiskFillingFast
+        expr: |
+          predict_linear(node_filesystem_avail_bytes{job="node-exporter", mountpoint="/var/lib/docker"}[30m], 2 * 3600) < 0
+            and 1 - node_filesystem_avail_bytes{job="node-exporter", mountpoint="/var/lib/docker"}
+              / node_filesystem_size_bytes{job="node-exporter", mountpoint="/var/lib/docker"} > 0.60
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Colima VM disk {{ $labels.mountpoint }} fills up within 2 hours at the current rate
+          description: >-
+            Most likely BuildKit cache from CI builds. Check
+            `scripts/install-build-cache-prune.sh status`, then
+            `docker builder prune -af --filter until=2h`.
 
   - name: mac
     rules:
