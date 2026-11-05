@@ -35,23 +35,21 @@ services:
     environment:
       PORT: "3000"
       DATABASE_URL: postgres://pocket-lens:${POCKET_LENS_DB_PASSWORD}@pocket-lens-postgres:5432/pocket-lens
-      # The library from the host, read-only: the host CLI is its only writer.
+      # The library from the host: the server files the inbox into it and is its only writer.
       LENS_LIBRARY_ROOT: /library
-      # Phone uploads, the server's only writable folder; the host CLI moves them into the inbox.
-      LENS_UPLOADS_ROOT: /uploads
       LENS_INGEST_TOKEN: ${POCKET_LENS_INGEST_TOKEN}
       LENS_ALLOWED_LOGIN: ${POCKET_LENS_ALLOWED_LOGIN}
       LENS_BACKUP: ${POCKET_LENS_BACKUP:-none}
       LENS_TIME_ZONE: ${POCKET_LENS_TIME_ZONE:-Europe/Berlin}
-      # lens-embedder serve on the host's loopback, reached through the Lima gateway.
+      # lens-embedder serve on the host's loopback, reached through the Lima gateway: the vectors
+      # of new photos and of search queries.
       LENS_EMBEDDER_URL: http://host.lima.internal:${POCKET_LENS_EMBEDDER_PORT:-4421}
       OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: http://prometheus:9090/api/v1/otlp/v1/metrics
       OTEL_SERVICE_NAME: pocket-lens
       OTEL_RESOURCE_ATTRIBUTES: service.version=${POCKET_LENS_VERSION},deployment.environment.name=production
     volumes:
-      - ${DATA_ROOT}/pocket-lens/library:/library:ro
-      - ${DATA_ROOT}/pocket-lens/uploads:/uploads
-    # The host CLI's door to the ingest group: loopback only, never the LAN.
+      - ${DATA_ROOT}/pocket-lens/library:/library
+    # The door of `pocket-lens import` on the host: loopback only, never the LAN.
     ports:
       - 127.0.0.1:${POCKET_LENS_API_PORT:-4420}:3000
     depends_on:
