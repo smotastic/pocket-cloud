@@ -8,21 +8,23 @@ It has two halves:
 
 | Here, in the VM | On the host ([`native/pocket-lens`](../../native/pocket-lens/README.md)) |
 | --- | --- |
-| `pocket-lens-postgres`, `-migrate`, `-server`, `-web`, and `tailscale-lens` | the nightly `pocket-lens run`, `pocket-lens watch` for Import now and uploads, and the search worker `lens-embedder serve`, all launchd agents |
+| `pocket-lens-postgres`, `-migrate`, `-server`, `-web`, and `tailscale-lens` | the model worker `lens-embedder serve` (a socket-activated launchd agent) and the `pocket-lens import` command for the card reader |
 
-- **Library:** `${DATA_ROOT}/pocket-lens/library`, mounted read-only into the server. The host CLI
-  is its only writer. Its `cache/` is not backed up.
-- **Uploads:** `${DATA_ROOT}/pocket-lens/uploads`, mounted read-write at `/uploads`: the phone's
-  originals, written by the server under a hidden name and renamed once verified. The host CLI moves
-  them into the library's inbox. It is the only folder the server writes.
+- **Library:** `${DATA_ROOT}/pocket-lens/library`, mounted read-write into the server, which is
+  its only writer: each import (nightly at 03:00, Import now, phone uploads, `pocket-lens import`)
+  files the inbox with exiftool and vips in the image and asks the worker on the host for the
+  vectors. Phone uploads arrive in `inbox/.uploads/` and move into `inbox/` once verified. Its
+  `cache/` is not backed up.
 - **Ports:** the web app publishes none; only `tailscale-lens` reaches it, so the
   `Tailscale-User-Login` header the server trusts can't be forged from the LAN. The server publishes
-  `127.0.0.1:${POCKET_LENS_API_PORT}` for the host CLI, which authenticates with
+  `127.0.0.1:${POCKET_LENS_API_PORT}` for `pocket-lens import` on the host, which authenticates with
   `POCKET_LENS_INGEST_TOKEN`.
-- **Search:** the server calls the worker on the host's loopback through `host.lima.internal`.
-  While the worker is down, search answers 503; the rest of the gallery works.
-- **Memory:** server and Postgres stay around 120 MB; the model runs on the host only during a run
-  or a search.
+- **Model:** the server calls the worker on the host's loopback through `host.lima.internal`.
+  While the worker is down, search answers 503 and an import fails with "the image model on the
+  Mac is not reachable", leaving the inbox as it is; the rest of the gallery works.
+- **Memory:** server and Postgres stay around 130 MB; an import adds up to a few hundred MB while it
+  makes previews, one photo at a time. The model runs on the host only during an import or a
+  search.
 
 ## Deploy
 
