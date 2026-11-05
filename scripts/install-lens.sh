@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 # The host side of pocket-lens: check out the release lens-v$POCKET_LENS_VERSION under DATA_ROOT,
-# build the CLI and the model worker, write the CLI's token file and wrapper, and register two
-# launchd agents: the nightly run and the socket-activated search worker. The server and web app
+# build the CLI and the model worker, write the CLI's token file and wrapper, and register three
+# launchd agents: the nightly run, the watcher for "Import now" and phone uploads, and the
+# socket-activated search worker. The server and web app
 # run in the VM (stacks/pocket-lens). See native/pocket-lens/README.md.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RUN_LABEL="dev.pocket-cloud.lens-run"
 EMBEDDER_LABEL="dev.pocket-cloud.lens-embedder"
+WATCH_LABEL="dev.pocket-cloud.lens-watch"
 DOMAIN="gui/$(id -u)"
 BUILT_MARKER=".pocket-cloud-built"
 KEEP_RELEASES=3
@@ -19,6 +21,7 @@ set +a
 
 LENS_DIR="$DATA_ROOT/pocket-lens/host"
 LIBRARY="$DATA_ROOT/pocket-lens/library"
+UPLOADS="$DATA_ROOT/pocket-lens/uploads"
 TOKEN_FILE="$HOME/.config/pocket-lens/ingest-token"
 API_PORT="${POCKET_LENS_API_PORT:-4420}"
 EMBEDDER_PORT="${POCKET_LENS_EMBEDDER_PORT:-4421}"
@@ -106,11 +109,12 @@ write_token() {
 
 # `pocket-lens` with the library and the server set, for launchd and for the terminal.
 write_wrapper() {
-  mkdir -p "$LENS_DIR/bin" "$LIBRARY/inbox"
+  mkdir -p "$LENS_DIR/bin" "$LIBRARY/inbox" "$UPLOADS"
   cat > "$LENS_DIR/bin/pocket-lens" <<WRAPPER
 #!/usr/bin/env bash
 export PATH="$(brew --prefix)/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 export LENS_LIBRARY_ROOT="$LIBRARY"
+export LENS_UPLOADS_ROOT="$UPLOADS"
 export LENS_API_URL="http://127.0.0.1:$API_PORT"
 export LENS_INGEST_TOKEN_FILE="$TOKEN_FILE"
 export LENS_TIME_ZONE="${POCKET_LENS_TIME_ZONE:-Europe/Berlin}"
@@ -166,30 +170,32 @@ install() {
   write_wrapper
   render_agent "$RUN_LABEL"
   render_agent "$EMBEDDER_LABEL"
+  render_agent "$WATCH_LABEL"
   if ! has_gui_domain; then
     echo "No desktop session ($DOMAIN); the agents load at the next login."
     return
   fi
   load_agent "$RUN_LABEL"
   load_agent "$EMBEDDER_LABEL"
+  load_agent "$WATCH_LABEL"
   prune_releases
-  echo "Registered $RUN_LABEL (03:00) and $EMBEDDER_LABEL (127.0.0.1:$EMBEDDER_PORT), pocket-lens $POCKET_LENS_VERSION ($sha)."
+  echo "Registered $RUN_LABEL (03:00), $WATCH_LABEL and $EMBEDDER_LABEL (127.0.0.1:$EMBEDDER_PORT), pocket-lens $POCKET_LENS_VERSION ($sha)."
   echo "Library: $LIBRARY (set it as the Wireless Transmitter Utility destination: $LIBRARY/inbox)"
 }
 
 uninstall() {
   local label
-  for label in "$RUN_LABEL" "$EMBEDDER_LABEL"; do
+  for label in "$RUN_LABEL" "$WATCH_LABEL" "$EMBEDDER_LABEL"; do
     if is_loaded "$label"; then launchctl bootout "$DOMAIN/$label"; echo "Unregistered $label."; fi
     rm -f "$HOME/Library/LaunchAgents/$label.plist"
   done
   rm -f "$(brew --prefix)/bin/pocket-lens"
-  echo "Releases, the library and $TOKEN_FILE are kept."
+  echo "Releases, the library, the uploads and $TOKEN_FILE are kept."
 }
 
 status() {
   local label code
-  for label in "$RUN_LABEL" "$EMBEDDER_LABEL"; do
+  for label in "$RUN_LABEL" "$WATCH_LABEL" "$EMBEDDER_LABEL"; do
     if is_loaded "$label"; then echo "$label: loaded"; else echo "$label: not loaded"; fi
   done
   echo "release: $(current_sha || echo none)"
