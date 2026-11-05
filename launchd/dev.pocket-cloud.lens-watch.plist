@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Template. scripts/install-lens.sh replaces the __PLACEHOLDERS__ and
+  installs the result to ~/Library/LaunchAgents/. Do not load this file directly.
+-->
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>dev.pocket-cloud.lens-watch</string>
+	<!-- "Import now" and phone uploads from the gallery: the CLI holds a request to the server
+	     open, and runs the batch job when one is queued (pocket-lens spec 007, ADR 0016). It shares
+	     the run lock with the nightly agent, so runs never overlap. -->
+	<key>ProgramArguments</key>
+	<array>
+		<string>__LENS_DIR__/bin/pocket-lens</string>
+		<string>watch</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<true/>
+	<!-- If the process ever exits, launchd waits this long before starting it again. -->
+	<key>ThrottleInterval</key>
+	<integer>30</integer>
+	<key>StandardOutPath</key>
+	<string>__HOME__/Library/Logs/pocket-cloud/lens-watch.log</string>
+	<key>StandardErrorPath</key>
+	<string>__HOME__/Library/Logs/pocket-cloud/lens-watch.log</string>
+</dict>
+</plist>
