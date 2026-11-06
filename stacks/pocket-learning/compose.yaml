@@ -77,6 +77,9 @@ services:
       # Empty: the Pi login below is used.
       COACH_API_KEY: ${POCKET_LEARNING_COACH_API_KEY:-}
       COACH_PI_AUTH_FILE: /pi/auth.json
+      # Optional web search (Brave); empty: the coach reads pages it is given but does not search.
+      COACH_BRAVE_API_KEY: ${POCKET_LEARNING_COACH_BRAVE_API_KEY:-}
+      COACH_SEARCH_MONTHLY_CAP: ${POCKET_LEARNING_COACH_SEARCH_MONTHLY_CAP:-500}
     volumes:
       # Pi's agent directory, read and written: the coach refreshes the login under Pi's lock.
       - ${POCKET_LEARNING_PI_AGENT_DIR}:/pi

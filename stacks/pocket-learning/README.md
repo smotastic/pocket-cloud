@@ -94,6 +94,9 @@ writes cards only through the server's API, after the learner approves each writ
   directory is mounted read-write: the coach refreshes an expired login and writes it back
   under Pi's lock, so the Pi CLI and the coach share one login. `POCKET_LEARNING_COACH_API_KEY`
   is an optional key instead.
+- **Web search (optional):** `POCKET_LEARNING_COACH_BRAVE_API_KEY` and
+  `POCKET_LEARNING_COACH_SEARCH_MONTHLY_CAP` (default 500, inside Brave's monthly credit). Without
+  a key the coach still reads the public pages it is given.
 - Without a model or credentials the coach stops at start-up and its logs name the setting;
   review keeps working.
 
