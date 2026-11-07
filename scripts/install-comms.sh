@@ -152,7 +152,7 @@ render_agent() {
   local name
   for name in COMMS_GITEA_URL COMMS_GITEA_TOKEN COMMS_GITEA_HOSTS \
     COMMS_STATE_DIR COMMS_BRAINSTORM_PROVIDER COMMS_BRAINSTORM_MODEL COMMS_BRAINSTORM_API_KEY \
-    COMMS_BRAINSTORM_THINKING COMMS_PI_AUTH_FILE; do
+    COMMS_BRAINSTORM_THINKING COMMS_BRAINSTORM_PI_AUTH_FILE; do
     if [[ -n "${!name:-}" ]]; then
       plutil -insert "EnvironmentVariables.$name" -string "${!name}" "$AGENT"
     fi
