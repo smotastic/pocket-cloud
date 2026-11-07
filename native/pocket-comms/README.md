@@ -46,7 +46,7 @@ In `.env`:
 | `COMMS_BRAINSTORM_API_KEY` | Optional. An API key for that provider; without it the server uses the Mac user's Pi login (`pi`, then `/login`) |
 | `COMMS_BRAINSTORM_THINKING` | Optional. `off` (default) to `max` |
 | `COMMS_STATE_DIR` | Optional. Where the brainstorm chat is kept, default `~/.pocket-comms` |
-| `COMMS_PI_AUTH_FILE` | Optional. Pi's credential file, default `~/.pi/agent/auth.json` |
+| `COMMS_BRAINSTORM_PI_AUTH_FILE` | Optional. Pi's credential file, default `~/.pi/agent/auth.json` |
 
 Requires Node.js 26+ and pnpm 11+ (Homebrew). Then:
 
