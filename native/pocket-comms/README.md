@@ -47,6 +47,7 @@ In `.env`:
 | `COMMS_BRAINSTORM_THINKING` | Optional. `off` (default) to `max` |
 | `COMMS_STATE_DIR` | Optional. Where the brainstorm chat is kept, default `~/.pocket-comms` |
 | `COMMS_BRAINSTORM_PI_AUTH_FILE` | Optional. Pi's credential file, default `~/.pi/agent/auth.json` |
+| `COMMS_SPEECH_URL`, `COMMS_SPEECH_MODEL` | Optional. The speech-to-text service for voice messages in the brainstorm chat, such as `http://localhost:4430/v1` and `Systran/faster-whisper-small` ([stacks/whisper](../../stacks/whisper/README.md)); without both there is no Record voice |
 
 Requires Node.js 26+ and pnpm 11+ (Homebrew). Then:
 

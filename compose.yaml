@@ -21,5 +21,7 @@ include:
     env_file: .env
   - path: stacks/pocket-lens/compose.yaml
     env_file: .env
+  - path: stacks/whisper/compose.yaml
+    env_file: .env
   - path: stacks/tailscale/compose.yaml
     env_file: .env

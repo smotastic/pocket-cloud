@@ -1,0 +1,28 @@
+services:
+  # speaches: faster-whisper behind an OpenAI-compatible POST /v1/audio/transcriptions, for the
+  # voice messages of pocket-comms (native on the host).
+  whisper:
+    image: ghcr.io/speaches-ai/speaches:0.9.0-rc.3-cpu
+    container_name: whisper
+    restart: unless-stopped
+    environment:
+      WHISPER__INFERENCE_DEVICE: cpu
+      WHISPER__COMPUTE_TYPE: int8
+      # Downloaded on start if missing; the server exits if the download fails.
+      PRELOAD_MODELS: '["${WHISPER_MODEL:-Systran/faster-whisper-small}"]'
+      # Seconds after the last clip until the model leaves memory.
+      STT_MODEL_TTL: ${WHISPER_MODEL_TTL:-300}
+      ENABLE_UI: "false"
+      LOG_LEVEL: info
+    volumes:
+      - ${DATA_ROOT}/whisper/models:/home/ubuntu/.cache/huggingface/hub
+    # Loopback only: pocket-comms on the host calls it, nothing on the LAN or the tailnet.
+    ports:
+      - 127.0.0.1:${WHISPER_PORT:-4430}:8000
+    mem_limit: 2g
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, http://localhost:8000/health]
+      interval: 30s
+      timeout: 10s
+      start_period: 2m
+      retries: 3
