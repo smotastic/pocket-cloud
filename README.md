@@ -35,6 +35,7 @@ stacks/
   pocket-galaxy/      # Pocket Galaxy, worlds and maps for tabletop campaigns
   pocket-home/        # pocket-home: Shelly BLU ingestor, web app and MQTT broker
   pocket-learning/    # pocket-learning: flashcards with spaced review
+  whisper/            # speech-to-text for pocket-comms (speaches, loopback only)
   tailscale/          # one Tailscale node per service exposed to the tailnet (HTTPS)
 ```
 
@@ -85,7 +86,7 @@ cp .env.example .env            # adjust if needed
 source .env && mkdir -p "$DATA_ROOT"/gitea/{data,config} "$DATA_ROOT"/observability/{grafana,prometheus,loki,alloy,alertmanager} \
   "$DATA_ROOT"/docmost/{storage,postgres} "$DATA_ROOT"/pocket-galaxy/{postgres,assets} \
   "$DATA_ROOT"/pocket-home/{mosquitto/config,mosquitto/data,postgres} "$DATA_ROOT"/pocket-learning/postgres \
-  "$DATA_ROOT"/tailscale/{galaxy,docmost,learning,home}
+  "$DATA_ROOT"/tailscale/{galaxy,docmost,learning,home} "$DATA_ROOT"/whisper/models
 docker compose up -d
 ```
 
