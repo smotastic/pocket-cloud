@@ -1,6 +1,7 @@
 services:
   # speaches: faster-whisper behind an OpenAI-compatible POST /v1/audio/transcriptions, for the
-  # voice messages of pocket-comms (native on the host).
+  # voice messages of pocket-comms (native on the host), pocket-learning's coach and pocket-home's
+  # assistant (both in this Compose project).
   whisper:
     image: ghcr.io/speaches-ai/speaches:0.9.0-rc.3-cpu
     container_name: whisper
@@ -16,7 +17,8 @@ services:
       LOG_LEVEL: info
     volumes:
       - ${DATA_ROOT}/whisper/models:/home/ubuntu/.cache/huggingface/hub
-    # Loopback only: pocket-comms on the host calls it, nothing on the LAN or the tailnet.
+    # Loopback only: pocket-comms on the host calls it, nothing on the LAN or the tailnet. The
+    # learning coach and the home server call whisper:8000 on the Compose network instead.
     ports:
       - 127.0.0.1:${WHISPER_PORT:-4430}:8000
     mem_limit: 2g

@@ -21,7 +21,7 @@ and [home-web README](https://github.com/smotastic/pocket-home/blob/master/apps/
 |---|---|---|
 | `pocket-home-mosquitto` | `eclipse-mosquitto` | MQTT broker, ports 1883 and 8883 (TLS) published for the gateway. Config in [`mosquitto.conf`](mosquitto.conf), mounted read-only. |
 | `pocket-home-web` | `home-web` | nginx: serves the web app, proxies `/api`, `/docs`, `/health` to the ingestor. The only published HTTP port. |
-| `pocket-home-ingestor` | `home-server` | API on port 3000, internal only, and the MQTT subscriber. One instance only: the broker keeps its session under one client id. |
+| `pocket-home-ingestor` | `home-server` | API on port 3000, internal only, and the MQTT subscriber. One instance only: the broker keeps its session under one client id. Calls the [whisper](../whisper/README.md) stack for the assistant's voice messages. |
 | `pocket-home-migrate` | `home-server` | Runs the migrations on every `up`, then exits. The ingestor starts only after it succeeds. |
 | `pocket-home-postgres` | `postgres` | Database, schema `ingestor`. Internal only. |
 
