@@ -80,6 +80,9 @@ services:
       # Optional web search (Brave); empty: the coach reads pages it is given but does not search.
       COACH_BRAVE_API_KEY: ${POCKET_LEARNING_COACH_BRAVE_API_KEY:-}
       COACH_SEARCH_MONTHLY_CAP: ${POCKET_LEARNING_COACH_SEARCH_MONTHLY_CAP:-500}
+      # Voice messages in the coach chat: the whisper stack, reached inside the Compose network.
+      COACH_SPEECH_URL: http://whisper:8000/v1
+      COACH_SPEECH_MODEL: ${WHISPER_MODEL:-Systran/faster-whisper-small}
     volumes:
       # Pi's agent directory, read and written: the coach refreshes the login under Pi's lock.
       - ${POCKET_LEARNING_PI_AGENT_DIR}:/pi

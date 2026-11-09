@@ -18,7 +18,7 @@ container registry.
 | `pocket-learning-web` | `learning-web` | nginx: serves the web app, proxies `/api`, `/docs`, `/health` to the server and `/api/v1/coach` to the coach. The only published port. |
 | `pocket-learning-server` | `learning-server` | REST API on port 3000, internal only. |
 | `pocket-learning-migrate` | `learning-server` | Runs the migrations on every `up`, then exits. The server starts only after it succeeds. |
-| `pocket-learning-coach` | `coach-server` | The learning coach's API on port 3000, internal only. Calls the model with the owner's Pi login. |
+| `pocket-learning-coach` | `coach-server` | The learning coach's API on port 3000, internal only. Calls the model with the owner's Pi login, and the [whisper](../whisper/README.md) stack for voice messages. |
 | `pocket-learning-coach-migrate` | `coach-server` | Runs the coach's migrations on every `up`, then exits. The coach starts only after it succeeds. |
 | `pocket-learning-postgres` | `postgres` | Database, schemas `learning` and `coach`. Internal only. |
 

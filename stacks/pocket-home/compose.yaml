@@ -108,6 +108,9 @@ services:
       ASSISTANT_THINKING: ${POCKET_HOME_ASSISTANT_THINKING:-medium}
       ASSISTANT_API_KEY: ${POCKET_HOME_ASSISTANT_API_KEY:-}
       ASSISTANT_PI_AUTH_FILE: /pi/auth.json
+      # Voice messages in the assistant chat: the whisper stack, reached inside the Compose network.
+      SPEECH_URL: http://whisper:8000/v1
+      SPEECH_MODEL: ${WHISPER_MODEL:-Systran/faster-whisper-small}
       HISTORY_RETENTION_DAYS: ${POCKET_HOME_HISTORY_RETENTION_DAYS:-}
       # Metrics only: Prometheus accepts no traces or logs. The service name stays the
       # default `home-server`, the job pocket-home's dashboard and alerts expect.
