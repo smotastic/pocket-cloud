@@ -41,6 +41,9 @@ services:
       LENS_ALLOWED_LOGIN: ${POCKET_LENS_ALLOWED_LOGIN}
       LENS_BACKUP: ${POCKET_LENS_BACKUP:-none}
       LENS_TIME_ZONE: ${POCKET_LENS_TIME_ZONE:-Europe/Berlin}
+      # Home as "latitude,longitude": suggested albums tell trips from home by it (lens spec 012).
+      # Required, because an empty value would stop the server at start.
+      LENS_HOME: ${POCKET_LENS_HOME:?set POCKET_LENS_HOME to "latitude,longitude"}
       # lens-embedder serve on the host's loopback, reached through the Lima gateway: the vectors
       # of new photos and of search queries.
       LENS_EMBEDDER_URL: http://host.lima.internal:${POCKET_LENS_EMBEDDER_PORT:-4421}
