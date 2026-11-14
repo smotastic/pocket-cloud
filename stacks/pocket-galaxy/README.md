@@ -62,10 +62,20 @@ so rerunning them on every `up` is safe.
 ### Rollback
 
 Set `POCKET_GALAXY_VERSION` back to the previous version and run the same `up -d`.
-Migrations are additive (new tables and columns only), so the older server runs on the
-newer schema; the older migrate step finds nothing to do. If a release ever needs a
-migration that isn't additive, its release notes say so, and rolling back means restoring
-the backup taken before the update.
+Migrations are usually additive (new tables and columns only), so the older server runs on
+the newer schema; the older migrate step finds nothing to do. A release whose migration isn't
+additive says so in its tag message, and rolling back means restoring the backup taken before
+the update. Take that backup first:
+
+```sh
+B="$DATA_ROOT/backups/pocket-galaxy-<old version>-$(date +%Y%m%d-%H%M%S)" && mkdir -p "$B"
+docker compose exec -T pocket-galaxy-postgres pg_dump -U pocket-galaxy -d pocket-galaxy -Fc > "$B/pocket-galaxy.dump"
+tar -C "$DATA_ROOT/pocket-galaxy" -czf "$B/assets.tar.gz" assets
+```
+
+**0.4.0** (page tree, spec 014) is not additive: it moves the parent scene into the page tree
+and drops `scenes.map_facets.parent_entry_id`. Its `/api/v1` changes are breaking, so install
+the `pocket` CLI from the same release.
 
 ## The `pocket` CLI
 
@@ -80,23 +90,9 @@ pocket worlds
 
 ## Lore import
 
-The import of the Tyria and Asterra lore from the tyria-codex snapshot is no longer on
-pocket-galaxy's `master`; it lives on the tag `lore-import-final`. The `/api/v1` endpoints
-it calls stay compatible. Run it once from a worktree of that tag on the development
-machine, against this stack:
-
-```sh
-git -C <pocket-galaxy> worktree add ../pocket-galaxy-lore lore-import-final
-cd ../pocket-galaxy-lore
-pnpm install
-pnpm lore:snapshot <tyria-codex clone>     # writes the pinned content to tmp/tyria-codex
-pnpm lore:import --base-url http://<mac-name>.local:3004 --dry-run
-pnpm lore:import --base-url http://<mac-name>.local:3004
-```
-
-The first run reports `Tyria: 7 created` and `Asterra: 42 created`. The import overwrites
-entries that differ from the snapshot, so run it before anyone edits those worlds, and not
-again afterwards. The tag's `docs/operations/lore-import.md` has the details.
+The old lore import (pocket-galaxy tag `lore-import-final`) targets the API before 0.4.0 and
+never ran against this stack. The import of the tyria-codex content into 0.4.0 and later,
+rules included, is pocket-galaxy spec 015; its runbook replaces this section.
 
 ## Metrics
 
