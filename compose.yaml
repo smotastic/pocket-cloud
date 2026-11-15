@@ -19,6 +19,8 @@ include:
     env_file: .env
   - path: stacks/pocket-learning/compose.yaml
     env_file: .env
+  - path: stacks/pocket-coach/compose.yaml
+    env_file: .env
   - path: stacks/pocket-lens/compose.yaml
     env_file: .env
   - path: stacks/whisper/compose.yaml

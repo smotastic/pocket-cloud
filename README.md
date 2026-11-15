@@ -35,6 +35,7 @@ stacks/
   pocket-galaxy/      # Pocket Galaxy, worlds and maps for tabletop campaigns
   pocket-home/        # pocket-home: Shelly BLU ingestor, web app and MQTT broker
   pocket-learning/    # pocket-learning: flashcards with spaced review
+  pocket-coach/       # pocket-coach: marathon coach on Garmin data
   whisper/            # speech-to-text for pocket-comms (speaches, loopback only)
   tailscale/          # one Tailscale node per service exposed to the tailnet (HTTPS)
 ```
