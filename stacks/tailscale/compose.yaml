@@ -51,6 +51,18 @@ services:
     depends_on:
       - pocket-learning-web
 
+  tailscale-coach:
+    <<: *tailscale
+    container_name: tailscale-coach
+    environment:
+      <<: *tailscale-env
+      TS_HOSTNAME: coach
+    volumes:
+      - ${DATA_ROOT}/tailscale/coach:/var/lib/tailscale
+      - ./serve/coach.json:/config/serve.json:ro
+    depends_on:
+      - pocket-coach-web
+
   tailscale-lens:
     <<: *tailscale
     container_name: tailscale-lens

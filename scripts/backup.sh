@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Back up DATA_ROOT with restic. Gitea, its runner, the Postgres-backed stacks
-# (bookmarks, Docmost, Pocket Galaxy, pocket-home, pocket-learning) and pocket-home's MQTT broker are
+# (bookmarks, Docmost, Pocket Galaxy, pocket-home, pocket-learning, pocket-coach) and pocket-home's MQTT broker are
 # stopped while the snapshot is taken, so the SQLite
 # database matches the git repositories and the Postgres data directories are
 # consistent with the files next to them.
@@ -21,8 +21,8 @@ export RESTIC_PASSWORD_FILE="${RESTIC_PASSWORD_FILE:-$HOME/.config/pocket-cloud/
 # Stopped for the snapshot and started again afterwards, in this order.
 SERVICES=(gitea-runner gitea bookmarks-server bookmarks-postgres docmost docmost-postgres
   pocket-galaxy-server pocket-galaxy-postgres pocket-home-ingestor pocket-home-postgres
-  pocket-home-mosquitto pocket-learning-server pocket-learning-postgres pocket-lens-server
-  pocket-lens-postgres)
+  pocket-home-mosquitto pocket-learning-server pocket-learning-postgres pocket-coach-server
+  pocket-coach-postgres pocket-lens-server pocket-lens-postgres)
 EXCLUDES=(
   "$DATA_ROOT/gitea-runner/data/cache"
   # Metrics and logs are high-churn and low-value; Grafana's DB next to them is kept.
