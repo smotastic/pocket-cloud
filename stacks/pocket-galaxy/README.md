@@ -11,14 +11,14 @@ moved from the Pi, the stack started empty.
 | Web app | https://galaxy.\<tailnet\>.ts.net (tailnet, HTTPS, installable), http://\<mac-name\>.local:3004 (LAN, `POCKET_GALAXY_HTTP_PORT`) |
 | API docs | https://galaxy.\<tailnet\>.ts.net/docs |
 | Version | `POCKET_GALAXY_VERSION` in `.env`, the image tag of both images |
-| Data | `${DATA_ROOT}/pocket-galaxy/postgres` (PostgreSQL data directory), `${DATA_ROOT}/pocket-galaxy/assets` (uploaded images and their variants) |
+| Data | `${DATA_ROOT}/pocket-galaxy/postgres` (PostgreSQL data directory, also the agent's chats and their pictures), `${DATA_ROOT}/pocket-galaxy/assets` (uploaded images and their variants), `${DATA_ROOT}/pocket-galaxy/pi` (Pi's agent directory unless `GALAXY_PI_AGENT_DIR` names another) |
 
 | Service | Image | Role |
 |---|---|---|
-| `pocket-galaxy-web` | `pocket-galaxy-web` | nginx: serves the PWA, proxies `/api`, `/docs`, `/health` to the server, caps uploads at 50 MB. The only published port. |
-| `pocket-galaxy-server` | `pocket-galaxy-server` | REST API on port 3000, internal only. Writes the asset files to `/data/assets` (`ASSET_DIR`). Limited to 1 GiB of memory: sharp decodes uploaded maps in memory. |
+| `pocket-galaxy-web` | `pocket-galaxy-web` | nginx: serves the PWA, proxies `/api`, `/docs`, `/health` to the server, caps uploads at 50 MB, passes the agent chat's event stream unbuffered. The only published port. |
+| `pocket-galaxy-server` | `pocket-galaxy-server` | REST API on port 3000, internal only. Writes the asset files to `/data/assets` (`ASSET_DIR`). Limited to 1 GiB of memory: sharp decodes uploaded maps in memory. Runs the agent chat with the owner's Pi login and the [whisper](../whisper/README.md) stack for voice messages. |
 | `pocket-galaxy-migrate` | `pocket-galaxy-server` | Runs the migrations of every module on every `up`, then exits. The server starts only after it succeeds. |
-| `pocket-galaxy-postgres` | `postgres` | Database, one schema per module (`worlds`, `entries`, `assets`, `scenes`). Internal only. |
+| `pocket-galaxy-postgres` | `postgres` | Database, one schema per module (`worlds`, `entries`, `assets`, `scenes`, `chats`). Internal only. |
 
 ## First run
 
@@ -32,7 +32,7 @@ moved from the Pi, the stack started empty.
 3. Create the data folders:
 
    ```sh
-   source .env && mkdir -p "$DATA_ROOT"/pocket-galaxy/{postgres,assets}
+   source .env && mkdir -p "$DATA_ROOT"/pocket-galaxy/{postgres,assets,pi}
    ```
 
    No `chown` is needed: the server runs as uid 1000 (`node`), and Colima's virtiofs mount
@@ -76,6 +76,29 @@ tar -C "$DATA_ROOT/pocket-galaxy" -czf "$B/assets.tar.gz" assets
 **0.4.0** (page tree, spec 014) is not additive: it moves the parent scene into the page tree
 and drops `scenes.map_facets.parent_entry_id`. Its `/api/v1` changes are breaking, so install
 the `pocket` CLI from the same release.
+
+## The agent chat
+
+From the release with pocket-galaxy spec 018, each world has an agent chat ("Agent" tab). The
+agent reads the world through the server's tools and proposes changes, which the owner accepts
+item by item in the app. Every setting is optional: without a model the server starts, logs why,
+and the chat says that the agent is not set up. In `.env`:
+
+| Setting | Meaning |
+|---|---|
+| `GALAXY_PROVIDER`, `GALAXY_MODEL` | The model from Pi's catalog, e.g. `openai` and `gpt-6-luna` as the coaches'. No model picker in the app. |
+| `GALAXY_THINKING` | `off` (default), `minimal`, `low`, `medium`, `high`, `xhigh` or `max`. |
+| `GALAXY_PI_AGENT_DIR` | Pi's agent directory with `auth.json`, mounted read-write at `/pi` (`GALAXY_PI_AUTH_FILE=/pi/auth.json`): Pi refreshes the login there. The same Pi login as the coaches works. Must be below `$HOME`. Empty: `${DATA_ROOT}/pocket-galaxy/pi`, which holds no login. |
+| `GALAXY_API_KEY` | Optional: a model API key instead of the Pi login. A secret. |
+
+Voice messages go to the [whisper](../whisper/README.md) stack at `http://whisper:8000/v1` with
+`WHISPER_MODEL`, inside the Compose network; while whisper is down a clip fails with Retry, and
+typing still works. Pictures in the chat are stored in PostgreSQL with their chat, at most four of
+4 MB per message, and leave with it.
+
+After changing a setting, run `docker compose up -d pocket-galaxy-server`. `docker compose logs
+pocket-galaxy-server` names a setting that keeps the agent from starting; `GET /api/v1/agent`
+answers whether it is ready.
 
 ## The `pocket` CLI
 

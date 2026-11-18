@@ -1,8 +1,10 @@
 # whisper
 
 Speech-to-text for the voice messages of [pocket-comms](../../native/pocket-comms/README.md)'
-chats, the [pocket-learning](../pocket-learning/README.md) coach and the
-[pocket-home](../pocket-home/README.md) assistant. [speaches](https://github.com/speaches-ai/speaches) runs
+chats, the [pocket-learning](../pocket-learning/README.md) coach, the
+[pocket-coach](../pocket-coach/README.md) marathon coach, the
+[pocket-home](../pocket-home/README.md) assistant and the
+[pocket-galaxy](../pocket-galaxy/README.md) agent chat. [speaches](https://github.com/speaches-ai/speaches) runs
 [faster-whisper](https://github.com/SYSTRAN/faster-whisper) on the VM's CPU behind an
 OpenAI-compatible API.
 
@@ -15,8 +17,9 @@ OpenAI-compatible API.
 
 - **Ports:** published on `127.0.0.1` only. pocket-comms runs on the host and reaches it the way it
   reaches Gitea; the service has no authentication, so it must never be on the LAN or the tailnet.
-- **Callers in the Compose project:** `pocket-learning-coach` (`COACH_SPEECH_URL`) and
-  `pocket-home-ingestor` (`SPEECH_URL`) call `http://whisper:8000/v1` on the project's network,
+- **Callers in the Compose project:** `pocket-learning-coach` (`COACH_SPEECH_URL`),
+  `pocket-coach-server` (`POCKET_COACH_SPEECH_URL`), `pocket-home-ingestor` (`SPEECH_URL`) and
+  `pocket-galaxy-server` (`GALAXY_SPEECH_URL`) call `http://whisper:8000/v1` on the project's network,
   with `WHISPER_MODEL` as their model. While the service is down, a clip shows "not transcribed"
   with Retry.
 - **Model:** downloaded on start if missing (`PRELOAD_MODELS`); the server exits if the download

@@ -36,7 +36,7 @@ stacks/
   pocket-home/        # pocket-home: Shelly BLU ingestor, web app and MQTT broker
   pocket-learning/    # pocket-learning: flashcards with spaced review
   pocket-coach/       # pocket-coach: marathon coach on Garmin data
-  whisper/            # speech-to-text for pocket-comms (speaches, loopback only)
+  whisper/            # speech-to-text for voice messages (speaches, loopback only)
   tailscale/          # one Tailscale node per service exposed to the tailnet (HTTPS)
 ```
 
@@ -85,7 +85,7 @@ All `docker compose` commands below assume the context is set.
 ```sh
 cp .env.example .env            # adjust if needed
 source .env && mkdir -p "$DATA_ROOT"/gitea/{data,config} "$DATA_ROOT"/observability/{grafana,prometheus,loki,alloy,alertmanager} \
-  "$DATA_ROOT"/docmost/{storage,postgres} "$DATA_ROOT"/pocket-galaxy/{postgres,assets} \
+  "$DATA_ROOT"/docmost/{storage,postgres} "$DATA_ROOT"/pocket-galaxy/{postgres,assets,pi} \
   "$DATA_ROOT"/pocket-home/{mosquitto/config,mosquitto/data,postgres} "$DATA_ROOT"/pocket-learning/postgres \
   "$DATA_ROOT"/tailscale/{galaxy,docmost,learning,home} "$DATA_ROOT"/whisper/models
 docker compose up -d
