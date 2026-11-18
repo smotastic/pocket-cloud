@@ -28,6 +28,9 @@ services:
       pocket-galaxy-postgres:
         condition: service_healthy
 
+  # The API and the agent chat (pocket-galaxy spec 018). The agent calls the model with the owner's
+  # Pi login, refreshed in place, like the coaches. Every agent setting is optional: without a
+  # model the server starts and the chat says that the agent is not set up.
   pocket-galaxy-server:
     image: ${GITEA_REGISTRY}/smotastic/pocket-galaxy-server:${POCKET_GALAXY_VERSION}
     container_name: pocket-galaxy-server
@@ -39,12 +42,24 @@ services:
       DATABASE_URL: postgres://pocket-galaxy:${POCKET_GALAXY_DB_PASSWORD}@pocket-galaxy-postgres:5432/pocket-galaxy
       # Uploaded images and their variants; uid 1000 (`node`) writes them through virtiofs.
       ASSET_DIR: /data/assets
+      GALAXY_PROVIDER: ${GALAXY_PROVIDER:-}
+      GALAXY_MODEL: ${GALAXY_MODEL:-}
+      GALAXY_THINKING: ${GALAXY_THINKING:-off}
+      # Empty: the Pi login below is used.
+      GALAXY_API_KEY: ${GALAXY_API_KEY:-}
+      GALAXY_PI_AUTH_FILE: /pi/auth.json
+      # Voice messages: the whisper stack, reached inside the Compose network.
+      GALAXY_SPEECH_URL: http://whisper:8000/v1
+      GALAXY_SPEECH_MODEL: ${WHISPER_MODEL:-Systran/faster-whisper-small}
       # Metrics only: Prometheus accepts no traces or logs.
       OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: http://prometheus:9090/api/v1/otlp/v1/metrics
       OTEL_SERVICE_NAME: pocket-galaxy
       OTEL_RESOURCE_ATTRIBUTES: service.version=${POCKET_GALAXY_VERSION},deployment.environment.name=production
     volumes:
       - ${DATA_ROOT}/pocket-galaxy/assets:/data/assets
+      # Pi's agent directory, read and written: Pi refreshes the login in auth.json. Unset, an
+      # empty folder of the stack, so the agent is not set up.
+      - ${GALAXY_PI_AGENT_DIR:-${DATA_ROOT}/pocket-galaxy/pi}:/pi
     depends_on:
       pocket-galaxy-migrate:
         condition: service_completed_successfully
