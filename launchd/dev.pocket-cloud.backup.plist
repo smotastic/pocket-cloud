@@ -21,7 +21,7 @@
 	</dict>
 	<key>WorkingDirectory</key>
 	<string>__REPO_ROOT__</string>
-	<!-- Daily at 03:30. If the Mac was asleep, launchd runs it once on wake. -->
+	<!-- Daily at 03:30. If the home server was asleep, launchd runs it once on wake. -->
 	<key>StartCalendarInterval</key>
 	<dict>
 		<key>Hour</key>

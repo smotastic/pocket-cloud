@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The TLS certificates of pocket-home's MQTT broker: a dedicated CA and a broker
-# certificate signed by it. The CA key stays in DATA_ROOT on the Mac and is never mounted
+# certificate signed by it. The CA key stays in DATA_ROOT on the home server and is never mounted
 # into a container; the broker gets its certificate, its key and the CA certificate.
 set -euo pipefail
 
@@ -26,7 +26,7 @@ Usage: scripts/pocket-home-mqtt-certs.sh [create|renew|status] [name...]
            or when the gateway reaches the broker under a new name
   status   Show the names and expiry dates
 
-The broker certificate names pocket-home-mosquitto (the ingestor), localhost, this Mac's
+The broker certificate names pocket-home-mosquitto (the ingestor), localhost, the home server's
 .local name and LAN address (the gateway), and every extra name given. Restart the broker
 afterwards: docker compose up -d --force-recreate pocket-home-mosquitto
 USAGE

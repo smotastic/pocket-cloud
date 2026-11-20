@@ -8,12 +8,12 @@ moved from the Pi, the stack started empty.
 
 | | |
 |---|---|
-| Web app | https://galaxy.\<tailnet\>.ts.net (tailnet, HTTPS, installable), http://\<mac-name\>.local:3004 (LAN, `POCKET_GALAXY_HTTP_PORT`) |
+| Web app | https://galaxy.\<tailnet\>.ts.net (tailnet, HTTPS, installable), http://\<home-server-name\>.local:3004 (LAN, `POCKET_GALAXY_HTTP_PORT`) |
 | API docs | https://galaxy.\<tailnet\>.ts.net/docs |
 | Version | `POCKET_GALAXY_VERSION` in `.env`, the image tag of both images |
 | Data | `${DATA_ROOT}/pocket-galaxy/postgres` (PostgreSQL data directory, also the agent's chats and their pictures), `${DATA_ROOT}/pocket-galaxy/assets` (uploaded images and their variants), `${DATA_ROOT}/pocket-galaxy/pi` (Pi's agent directory unless `GALAXY_PI_AGENT_DIR` names another) |
 
-| Service | Image | Role |
+| Container | Image | Role |
 |---|---|---|
 | `pocket-galaxy-web` | `pocket-galaxy-web` | nginx: serves the PWA, proxies `/api`, `/docs`, `/health` to the server, caps uploads at 50 MB, passes the agent chat's event stream unbuffered. The only published port. |
 | `pocket-galaxy-server` | `pocket-galaxy-server` | REST API on port 3000, internal only. Writes the asset files to `/data/assets` (`ASSET_DIR`). Limited to 1 GiB of memory: sharp decodes uploaded maps in memory. Runs the agent chat with the owner's Pi login and the [whisper](../whisper/README.md) stack for voice messages. |
@@ -36,12 +36,12 @@ moved from the Pi, the stack started empty.
    ```
 
    No `chown` is needed: the server runs as uid 1000 (`node`), and Colima's virtiofs mount
-   lets it write the asset folder although the folder belongs to your user on the Mac.
+   lets it write the asset folder although the folder belongs to your user on the home server.
 
 4. `docker compose up -d pocket-galaxy-web` from the repo root (pulls in its dependencies).
    The server is ready once `docker compose ps` shows it `healthy`; its readiness check
    asks the database and writes a probe file to the asset folder.
-5. For HTTPS over the tailnet, start its Tailscale node `tailscale-galaxy`
+5. For HTTPS over the tailnet, start its tailnet node `tailscale-galaxy`
    (see [`../tailscale/README.md`](../tailscale/README.md#first-start)).
 
 ## Updating
@@ -127,8 +127,8 @@ and `deployment_environment_name`.
 
 ## Backup
 
-`scripts/backup.sh` stops `pocket-galaxy-server` and `pocket-galaxy-postgres` while the
-snapshot is taken, so the database matches the asset files next to it. The app is
+`scripts/backup.sh` stops `pocket-galaxy-server` and `pocket-galaxy-postgres` during the
+backup, so the database matches the asset files next to it. The app is
 unavailable for those few seconds. `scripts/backup.sh restore-test` starts a throwaway
 Postgres on the restored data directory and logs the number of worlds, entries and asset
 files.
@@ -138,15 +138,15 @@ files.
 The app has **no authentication** (pocket-galaxy ADR 0016: reachable only from the home
 network or the tailnet). Two ways in:
 
-- **Tailnet**: `https://galaxy.<tailnet>.ts.net`, served by its own Tailscale node
+- **Tailnet**: `https://galaxy.<tailnet>.ts.net`, served by its own tailnet node
   `tailscale-galaxy` with a Tailscale certificate (see
   [`../tailscale/README.md`](../tailscale/README.md)). Every member of the tailnet can read
   and change every world. No Funnel, so it is not reachable from the internet. Use this address everywhere: the
   PWA's service worker needs HTTPS, so only here can the app be installed (Add to Home
   Screen / Install app) and get its offline shell.
 - **LAN**: `pocket-galaxy-web` is also published on `POCKET_GALAXY_HTTP_PORT`, on all
-  interfaces of the Mac, over plain HTTP. Any device on the LAN (and, with Tailscale's
-  default policy, on the tailnet via the Mac's address) can use it, but not install it.
+  interfaces of the home server, over plain HTTP. Any device on the LAN (and, with Tailscale's
+  default policy, on the tailnet via the home server's address) can use it, but not install it.
   The router forwards no ports.
 
 ## Debugging

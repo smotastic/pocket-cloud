@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Run pocket-comms natively on the Mac via a launchd agent: check out the pinned
-# version under DATA_ROOT, build it, and keep the server running. It needs Herdr's
-# socket and the session files in $HOME, so it can't run in the Colima VM.
+# Run pocket-comms' native part on the home server via a launchd agent: check out the
+# pinned release under DATA_ROOT, build it, and keep the server running. It needs Herdr's
+# socket and the session files in $HOME, so it can't run in the pocket-cloud VM.
 # See native/pocket-comms/README.md.
 set -euo pipefail
 

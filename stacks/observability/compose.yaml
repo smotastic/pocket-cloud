@@ -20,8 +20,8 @@ services:
     ports:
       - ${PROMETHEUS_PORT}:9090
 
-  # Per-container CPU and memory of the Colima VM, scraped by Prometheus.
-  # Sees the VM's cgroups, not the Mac itself.
+  # Per-container CPU and memory of the pocket-cloud VM, scraped by Prometheus.
+  # Sees the VM's cgroups, not the home server itself.
   cadvisor:
     image: ghcr.io/google/cadvisor:v0.60.6
     container_name: cadvisor
@@ -36,7 +36,7 @@ services:
       # Keep only the compose service label instead of every container label.
       - --store_container_labels=false
       - --whitelisted_container_labels=com.docker.compose.service
-    # Host paths inside the Colima VM, read-only.
+    # Paths inside the pocket-cloud VM, read-only.
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
@@ -44,8 +44,8 @@ services:
       - /var/lib/docker:/var/lib/docker:ro
       - /dev/disk:/dev/disk:ro
 
-  # Disk usage of the Colima VM (system disk and the /var/lib/docker data disk), for
-  # the alerts in alerts.yml. Sees the VM, not the Mac.
+  # Disk usage of the pocket-cloud VM (system disk and the /var/lib/docker data disk), for
+  # the alerts in alerts.yml. Sees the VM, not the home server.
   node-exporter:
     image: prom/node-exporter:v1.12.1
     container_name: node-exporter

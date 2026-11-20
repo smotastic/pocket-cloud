@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Push the size and free space of the Mac's disk that holds DATA_ROOT to Prometheus
+# Push the size and free space of the home server's disk that holds DATA_ROOT to Prometheus
 # over OTLP, for the MacDisk* alerts. Run every minute by the launchd agent from
-# scripts/install-disk-metrics.sh. node-exporter in the Colima VM can't do this:
+# scripts/install-disk-metrics.sh. node-exporter in the pocket-cloud VM can't do this:
 # it sees DATA_ROOT only as the virtiofs mount, which reports a meaningless size.
 set -euo pipefail
 

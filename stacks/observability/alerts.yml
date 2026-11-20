@@ -3,7 +3,7 @@ groups:
   - name: colima-vm
     rules:
       # /var/lib/docker holds images, containers and build cache (the VM's data disk);
-      # / is the VM's system disk. Data under ${DATA_ROOT} is on the Mac, not here.
+      # / is the VM's system disk. Data under ${DATA_ROOT} is on the home server, not here.
       - alert: VmDiskFilling
         expr: |
           1 - node_filesystem_avail_bytes{job="node-exporter", mountpoint=~"/|/var/lib/docker"}
@@ -51,7 +51,7 @@ groups:
 
   - name: mac
     rules:
-      # The Mac's disk that holds ${DATA_ROOT}, pushed every minute by
+      # The home server's disk that holds ${DATA_ROOT}, pushed every minute by
       # scripts/disk-metrics.sh. On APFS the size is the whole container's.
       - alert: MacDiskFilling
         expr: |
@@ -81,7 +81,7 @@ groups:
 
   - name: monitoring
     rules:
-      # The Mac's disk metrics are pushed, not scraped; a stopped agent would
+      # The home server's disk metrics are pushed, not scraped; a stopped agent would
       # otherwise silently stop the alerts above.
       - alert: MacDiskMetricsMissing
         expr: absent_over_time(mac_filesystem_avail_bytes{job="mac-disk"}[10m])

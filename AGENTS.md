@@ -1,11 +1,12 @@
 # AGENTS.md
 
-Deployment configuration (Docker Compose on a Colima VM) for the services on the home Mac mini.
+Deployment configuration (Docker Compose in the pocket-cloud VM) for the stacks on the home server.
 No application source, no runtime data. See [README.md](README.md). Open tasks are Gitea issues.
 
 ## Commands
 
-Every `docker` and `docker compose` call must target the pocket-cloud VM, not the dev VM:
+Every `docker` and `docker compose` call must target the pocket-cloud VM (Docker context
+`colima-pocket-cloud`), not the dev VM:
 
 ```sh
 export DOCKER_CONTEXT=colima-pocket-cloud   # set by mise.toml in interactive shells only
@@ -20,17 +21,20 @@ A set `DOCKER_HOST` overrides `DOCKER_CONTEXT` and points at the dev VM; agent s
 Run `unset DOCKER_HOST` first, or pass `docker --context colima-pocket-cloud ...`.
 
 Never run `colima stop`, `colima delete` or `docker compose down -v` on the `pocket-cloud` profile
-without asking; it takes every service down.
+(the pocket-cloud VM) without asking; it takes every stack down.
 
 ## Rules
 
 - This repository is **public**. Never commit secrets, hostnames, IPs, or personal paths.
   Secrets go in `.env` (git-ignored); templates use placeholders.
-- One folder per service in `stacks/<service>/` with its own `compose.yaml` and `README.md`,
-  listed in the root `compose.yaml`. Pin images to an exact version. A service that must run on
-  the host (pocket-comms) instead gets `launchd/<label>.plist`, `scripts/install-<name>.sh` and
-  `native/<name>/README.md`, and is pinned to a git tag or full SHA in `.env`.
-- Persistent data is a bind mount under `${DATA_ROOT}/<service>/`, never a named volume.
+- One folder per stack in `stacks/<stack>/` with its own `compose.yaml` and `README.md`,
+  listed in the root `compose.yaml`. Pin images to an exact version. A pocket app's native part,
+  which runs on the home server outside the VM (pocket-comms, pocket-lens), instead gets
+  `launchd/<label>.plist`, `scripts/install-<name>.sh` and `native/<name>/README.md`, and its
+  release is pinned in `.env` (a git tag or full SHA).
+- Persistent data is a bind mount under `${DATA_ROOT}/<stack>/`, never a named volume.
+- Use the terms in [GLOSSARY.md](GLOSSARY.md) (home server, pocket-cloud VM, stack, container,
+  native part, tailnet node, ...) and avoid the words it lists under _Avoid_.
 - Track tasks as Gitea issues (`tea issues ... --login local --repo smotastic/pocket-cloud`), not in
   Markdown files. Close the issue when the task is done (`Closes #N` in the commit); open one for new work.
 

@@ -8,12 +8,12 @@ container registry.
 
 | | |
 |---|---|
-| Web app | https://learning.\<tailnet\>.ts.net (tailnet, HTTPS), http://\<mac-name\>.local:3006 (LAN, `POCKET_LEARNING_HTTP_PORT`) |
+| Web app | https://learning.\<tailnet\>.ts.net (tailnet, HTTPS), http://\<home-server-name\>.local:3006 (LAN, `POCKET_LEARNING_HTTP_PORT`) |
 | API docs | https://learning.\<tailnet\>.ts.net/docs |
 | Version | `POCKET_LEARNING_VERSION` in `.env`, the image tag of all three images |
 | Data | `${DATA_ROOT}/pocket-learning/postgres` (PostgreSQL data directory) |
 
-| Service | Image | Role |
+| Container | Image | Role |
 |---|---|---|
 | `pocket-learning-web` | `learning-web` | nginx: serves the web app, proxies `/api`, `/docs`, `/health` to the server and `/api/v1/coach` to the coach. The only published port. |
 | `pocket-learning-server` | `learning-server` | REST API on port 3000, internal only. |
@@ -39,7 +39,7 @@ container registry.
 
 4. `docker compose up -d pocket-learning-web` from the repo root (pulls in its dependencies).
    The server is ready once `docker compose ps` shows it `healthy`.
-5. For HTTPS over the tailnet, start its Tailscale node `tailscale-learning`
+5. For HTTPS over the tailnet, start its tailnet node `tailscale-learning`
    (see [`../tailscale/README.md`](../tailscale/README.md#first-start)).
 6. Import the old flashcards once, see [below](#flashcards-import).
 7. Set up the coach, see [below](#the-learning-coach).
@@ -89,7 +89,7 @@ writes cards only through the server's API, after the learner approves each writ
 
 - **Model:** `POCKET_LEARNING_COACH_PROVIDER`, `POCKET_LEARNING_COACH_MODEL` and
   `POCKET_LEARNING_COACH_THINKING` in `.env`, from Pi's model catalog.
-- **Credentials:** the owner's Pi login. Sign in on the host with `pi`, then `/login`, and set
+- **Credentials:** the owner's Pi login. Sign in on the home server with `pi`, then `/login`, and set
   `POCKET_LEARNING_PI_AGENT_DIR` to Pi's agent directory (it must be below `$HOME`). The
   directory is mounted read-write: the coach refreshes an expired login and writes it back
   under Pi's lock, so the Pi CLI and the coach share one login. `POCKET_LEARNING_COACH_API_KEY`
@@ -128,8 +128,8 @@ Grafana, `{job="pocket-learning"}` shows `http_server_request_duration_seconds` 
 
 ## Backup
 
-`scripts/backup.sh` stops `pocket-learning-server` and `pocket-learning-postgres` while the
-snapshot is taken. `scripts/backup.sh restore-test` starts a throwaway Postgres on the restored
+`scripts/backup.sh` stops `pocket-learning-server` and `pocket-learning-postgres` during the
+backup. `scripts/backup.sh restore-test` starts a throwaway Postgres on the restored
 data directory and logs the number of cards and reviews.
 
 ## Access
@@ -138,7 +138,7 @@ The app has **no authentication** (accounts are out of scope in pocket-learning'
 reachable only from the home network or the tailnet. Anyone who can reach it can review, and
 anyone who can reach `/api/v1/teacher` can change cards.
 
-- **Tailnet**: `https://learning.<tailnet>.ts.net`, served by its own Tailscale node
+- **Tailnet**: `https://learning.<tailnet>.ts.net`, served by its own tailnet node
   `tailscale-learning`. No Funnel.
 - **LAN**: `pocket-learning-web` is also published on `POCKET_LEARNING_HTTP_PORT` over plain
   HTTP. The router forwards no ports.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Start the pocket-cloud Colima VM automatically at login via a launchd agent.
+# Start the pocket-cloud VM (Colima profile pocket-cloud) automatically at login via a launchd agent.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

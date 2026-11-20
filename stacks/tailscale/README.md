@@ -2,42 +2,44 @@
 
 Remote access over [Tailscale](https://tailscale.com), split in two:
 
-- **The Mac** runs Tailscale (Homebrew) for SSH. It serves only
-  [pocket-comms](../../native/pocket-comms/README.md), which runs on the host, not in the VM.
-- **Each exposed service** gets its own Tailscale node: a sidecar container in this stack
-  that joins the tailnet under its own name and serves that one service over HTTPS,
-  e.g. `https://galaxy.<tailnet>.ts.net`. The certificate comes from Tailscale.
+- **The home server** runs Tailscale (Homebrew) for SSH. It serves only
+  [pocket-comms' native part](../../native/pocket-comms/README.md), which runs outside the
+  pocket-cloud VM. pocket-lens' native part is not on the tailnet; only its stack calls it.
+- **Each stack on the tailnet** gets its own tailnet node: a container in this stack
+  that joins the tailnet under its own name and serves that one stack's web container over
+  HTTPS, e.g. `https://galaxy.<tailnet>.ts.net`. The certificate comes from Tailscale.
 
-Only the services listed in [`compose.yaml`](compose.yaml) get a tailnet name and HTTPS.
-With Tailscale's default policy, though, tailnet devices also reach everything the Mac
-publishes on its LAN ports, over the Mac's tailnet address (see [Hardening](#hardening)).
+Only the stacks listed in [`compose.yaml`](compose.yaml) get a tailnet name and HTTPS.
+With Tailscale's default policy, though, tailnet devices also reach everything the home server
+publishes on its LAN ports, over the home server's tailnet address (see [Hardening](#hardening)).
 No Funnel: nothing is reachable from the internet.
 
-| Node | Service | Serve config | Data |
+| Node | Container | Serve config | Data |
 |---|---|---|---|
 | `galaxy` | `pocket-galaxy-web:8080` | [`serve/galaxy.json`](serve/galaxy.json) | `${DATA_ROOT}/tailscale/galaxy` |
 | `docmost` | `docmost:3000` | [`serve/docmost.json`](serve/docmost.json) | `${DATA_ROOT}/tailscale/docmost` |
 | `learning` | `pocket-learning-web:8080` | [`serve/learning.json`](serve/learning.json) | `${DATA_ROOT}/tailscale/learning` |
 | `coach` | `pocket-coach-web:8080` | [`serve/coach.json`](serve/coach.json) | `${DATA_ROOT}/tailscale/coach` |
+| `lens` | `pocket-lens-web:8080` | [`serve/lens.json`](serve/lens.json) | `${DATA_ROOT}/tailscale/lens` |
 | `home` | `pocket-home-web:8080` | [`serve/home.json`](serve/home.json) | `${DATA_ROOT}/tailscale/home` |
 
-## How a sidecar works
+## How a tailnet node works
 
 - `TS_AUTHKEY` (from `.env`) logs the node in once; its identity then lives in
   `TS_STATE_DIR`, a bind mount under `${DATA_ROOT}/tailscale/<node>/`. `TS_AUTH_ONCE` keeps
   later restarts from logging in again, so the key can expire without breaking anything.
 - `TS_SERVE_CONFIG` is the committed `serve/<node>.json`: HTTPS on 443, proxied to the
-  service's container by its compose name. `${TS_CERT_DOMAIN}` is filled in by the
+  stack's container by its compose name. `${TS_CERT_DOMAIN}` is filled in by the
   container with the node's own name, so no tailnet name is committed.
 - **Userspace networking** (`TS_USERSPACE=true`). The pocket-cloud VM has `/dev/net/tun`,
   so kernel mode would work too, but it needs `NET_ADMIN` and the device mapped into the
   container. Serve doesn't need it: tailscaled terminates TLS and opens the connection to
-  the service itself, over the compose network. Userspace keeps the containers
+  the container itself, over the compose network. Userspace keeps the containers
   unprivileged.
-- The sidecars live in this stack, not next to each service: what gets a tailnet name
-  is one file to review, the shared settings are written once (`x-tailscale`), and the
-  service stacks run without Tailscale. All stacks are included into one compose project,
-  so a sidecar reaches any service by name.
+- The tailnet nodes live in this stack, not next to each stack they serve: what gets a
+  tailnet name is one file to review, the shared settings are written once (`x-tailscale`),
+  and the other stacks run without Tailscale. All stacks are included into one compose
+  project, so a tailnet node reaches any container by name.
 
 ## Admin console setup (once)
 
@@ -54,16 +56,16 @@ In the [admin console](https://login.tailscale.com/admin):
    ```
 
    This is required: an auth key can only carry a tag that has an owner, and tagged nodes
-   have key expiry disabled, so the sidecars stay logged in.
+   have key expiry disabled, so the tailnet nodes stay logged in.
 3. **Settings > Keys**: generate an auth key: **reusable**, **tags: `tag:pocket-cloud`**,
    not ephemeral (an ephemeral node disappears when its container stops). Put it into
    `.env` as `TS_AUTHKEY`.
 
-With the default policy, every tailnet device reaches the sidecars and also the Mac's
-tailnet address, and with it every port the Mac publishes on the LAN: Prometheus (no
-auth, also the OTLP receiver), Grafana, Gitea, Docmost, Pocket Galaxy, pocket-learning, pocket-home over
+With the default policy, every tailnet device reaches the tailnet nodes and also the home
+server's tailnet address, and with it every port the home server publishes on the LAN: Prometheus (no
+auth, also the OTLP receiver), Grafana, Gitea, Docmost, Pocket Galaxy, pocket-learning, pocket-coach, pocket-home over
 plain HTTP and its MQTT broker over plain TCP. That is no worse than the LAN as long as only your own devices are in the tailnet.
-The default `ssh` rule lets you SSH into your own devices (the Mac included) in `check`
+The default `ssh` rule lets you SSH into your own devices (the home server included) in `check`
 mode, which asks for a browser login every 12 hours.
 
 ### Hardening
@@ -77,9 +79,9 @@ Once other people join the tailnet, or to keep the LAN ports off it, replace the
     "tag:pocket-cloud": ["autogroup:admin"]
   },
   "grants": [
-    // Every member reaches the pocket-cloud services, HTTPS only.
+    // Every member reaches the pocket-cloud tailnet nodes, HTTPS only.
     { "src": ["autogroup:member"], "dst": ["tag:pocket-cloud"], "ip": ["tcp:443"] },
-    // SSH to the owner's own devices, which includes the Mac, and pocket-comms on the Mac.
+    // SSH to the owner's own devices, which includes the home server, and pocket-comms on it.
     { "src": ["autogroup:owner"], "dst": ["autogroup:self"], "ip": ["tcp:22", "tcp:443"] }
   ],
   "ssh": [
@@ -94,12 +96,12 @@ Once other people join the tailnet, or to keep the LAN ports off it, replace the
 }
 ```
 
-`autogroup:self` is the owner's own devices, which includes the Mac as long as it is
-logged in with the owner's account (not tagged). The tailnet then reaches only the
-services listed here, the Mac's LAN ports only from the LAN. Tagged nodes have no SSH
-rule, so nobody can SSH into a sidecar, and the sidecars reach nothing in the tailnet.
+`autogroup:self` is the owner's own devices, which includes the home server as long as it
+is logged in with the owner's account (not tagged). The tailnet then reaches only the
+stacks listed here, the home server's LAN ports only from the LAN. Tagged nodes have no SSH
+rule, so nobody can SSH into a tailnet node container, and those reach nothing in the tailnet.
 
-## The Mac (SSH)
+## The home server (SSH)
 
 Set up by hand, outside this repo. Prerequisite, once: the `tailscale` Homebrew formula
 (the open-source tailscaled, which runs without a desktop session and supports Tailscale
@@ -110,10 +112,10 @@ sudo brew services start tailscale # starts at boot, before any login
 sudo tailscale up --ssh            # log in with your account; enables Tailscale SSH
 ```
 
-Then, in the admin console, **Disable key expiry** for the Mac (machine menu), otherwise
-it drops off the tailnet after 180 days and SSH stops working. The Mac runs `tailscale serve`
+Then, in the admin console, **Disable key expiry** for the home server (machine menu), otherwise
+it drops off the tailnet after 180 days and SSH stops working. The home server runs `tailscale serve`
 for pocket-comms only (443 → `127.0.0.1:4410`, see its
-[README](../../native/pocket-comms/README.md)); every container service goes through a sidecar.
+[README](../../native/pocket-comms/README.md)); every stack goes through a tailnet node in this stack.
 
 ## First start
 
@@ -126,7 +128,7 @@ docker compose logs -f tailscale-galaxy   # wait for the login, then Ctrl-C
 The node appears in the admin console as `galaxy` with the tag `tag:pocket-cloud`. The
 first HTTPS request fetches the certificate and can take a few seconds.
 
-## Adding a service
+## Adding a tailnet node
 
 Example: Grafana as `grafana`.
 
@@ -152,16 +154,16 @@ Example: Grafana as `grafana`.
    `docker compose up -d tailscale-grafana`.
 4. Check the app itself: apps that build absolute links need the new address, e.g.
    Grafana's `GF_SERVER_ROOT_URL` or Docmost's `DOCMOST_APP_URL`. Add a section on the
-   access to the service's README.
+   access to the stack's README.
 
 The same auth key logs in every node. If it has expired, create a new one first.
 
 ## Backup and restore
 
-`scripts/backup.sh` snapshots all of `DATA_ROOT`, so `${DATA_ROOT}/tailscale/` is in
+`scripts/backup.sh` backs up all of the data root, so `${DATA_ROOT}/tailscale/` is in
 every backup and a restored node comes back with its identity and name. The state changes
-rarely, so the sidecars keep running during the snapshot. If a node was deleted in the
-admin console in the meantime, delete its state folder and start the sidecar again; it
+rarely, so the tailnet nodes keep running during the backup. If a node was deleted in the
+admin console in the meantime, delete its state folder and start its container again; it
 logs in with `TS_AUTHKEY` as a new node.
 
 ## Debugging

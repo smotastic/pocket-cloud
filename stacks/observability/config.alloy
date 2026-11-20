@@ -1,4 +1,4 @@
-// Tails the stdout/stderr of every container in the Colima VM and pushes it to Loki.
+// Tails the stdout/stderr of every container in the pocket-cloud VM and pushes it to Loki.
 
 discovery.docker "containers" {
   host             = "unix:///var/run/docker.sock"

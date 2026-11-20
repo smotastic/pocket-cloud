@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Prune the Colima VM's BuildKit cache by age. Run every 15 minutes by the launchd
+# Prune the pocket-cloud VM's BuildKit cache by age. Run every 15 minutes by the launchd
 # agent from scripts/install-build-cache-prune.sh. BuildKit's own GC policy
 # (docker.builder.gc in the Colima profile) doesn't cap the cache with the containerd
 # image store: it counts most records as shared and skips them, see

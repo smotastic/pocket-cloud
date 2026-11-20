@@ -15,20 +15,20 @@ OpenAI-compatible API.
 | Model | `Systran/faster-whisper-small` (`WHISPER_MODEL`), multilingual, int8 on CPU |
 | Data | `${DATA_ROOT}/whisper/models` (the Hugging Face cache, ~470 MB for `small`) |
 
-- **Ports:** published on `127.0.0.1` only. pocket-comms runs on the host and reaches it the way it
-  reaches Gitea; the service has no authentication, so it must never be on the LAN or the tailnet.
+- **Ports:** published on `127.0.0.1` only. pocket-comms' native part runs on the home server and reaches it
+  the way it reaches Gitea; the container has no authentication, so it must never be on the LAN or the tailnet.
 - **Callers in the Compose project:** `pocket-learning-coach` (`COACH_SPEECH_URL`),
   `pocket-coach-server` (`POCKET_COACH_SPEECH_URL`), `pocket-home-ingestor` (`SPEECH_URL`) and
   `pocket-galaxy-server` (`GALAXY_SPEECH_URL`) call `http://whisper:8000/v1` on the project's network,
-  with `WHISPER_MODEL` as their model. While the service is down, a clip shows "not transcribed"
+  with `WHISPER_MODEL` as their model. While the container is down, a clip shows "not transcribed"
   with Retry.
 - **Model:** downloaded on start if missing (`PRELOAD_MODELS`); the server exits if the download
   fails. The language is detected per clip unless a request sets `language`.
 - **Memory:** about 230 MB idle after a start, about 950 MB while the model is loaded, limited to
   2 GiB. `WHISPER_MODEL_TTL` seconds (default 300) after the last clip the model is unloaded; the
   process then stays at about 600 MB, because Python keeps most of the freed memory.
-- **Speed:** a 17-second clip takes about 4 to 7 seconds on the VM's 4 CPUs, longer while the Mac
-  is busy, and a second more when the model has to load first.
+- **Speed:** a 17-second clip takes about 4 to 7 seconds on the VM's 4 CPUs, longer while the home
+  server is busy, and a second more when the model has to load first.
 
 ## Deploy
 

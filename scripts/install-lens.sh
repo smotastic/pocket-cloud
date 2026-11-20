@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The host side of pocket-lens: check out the release lens-v$POCKET_LENS_VERSION under DATA_ROOT,
+# The native part of pocket-lens: check out the release lens-v$POCKET_LENS_VERSION under DATA_ROOT,
 # build the CLI and the model worker, write the CLI's token file and wrapper, and register the
 # socket-activated model worker. The server runs every import in the VM (stacks/pocket-lens) and
 # asks the worker for vectors. See native/pocket-lens/README.md.
@@ -7,7 +7,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 EMBEDDER_LABEL="dev.pocket-cloud.lens-embedder"
-# The agents of lens 0.4 and earlier, which ran the import on the host; removed on install.
+# The agents of lens 0.4 and earlier, which ran the import on the home server; removed on install.
 RETIRED_LABELS=("dev.pocket-cloud.lens-run" "dev.pocket-cloud.lens-watch")
 DOMAIN="gui/$(id -u)"
 BUILT_MARKER=".pocket-cloud-built"

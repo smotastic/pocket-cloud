@@ -11,13 +11,13 @@ and [home-web README](https://github.com/smotastic/pocket-home/blob/master/apps/
 
 | | |
 |---|---|
-| Web app | http://\<mac-name\>.local:3005 (LAN, `POCKET_HOME_HTTP_PORT`), https://home.\<tailnet\>.ts.net (tailnet) |
-| API docs | http://\<mac-name\>.local:3005/docs |
-| MQTT | `<mac-name>.local:1883` (`POCKET_HOME_MQTT_PORT`), plain TCP, and `<mac-name>.local:8883` (`POCKET_HOME_MQTTS_PORT`), TLS; LAN only |
+| Web app | http://\<home-server-name\>.local:3005 (LAN, `POCKET_HOME_HTTP_PORT`), https://home.\<tailnet\>.ts.net (tailnet) |
+| API docs | http://\<home-server-name\>.local:3005/docs |
+| MQTT | `<home-server-name>.local:1883` (`POCKET_HOME_MQTT_PORT`), plain TCP, and `<home-server-name>.local:8883` (`POCKET_HOME_MQTTS_PORT`), TLS; LAN only |
 | Versions | `POCKET_HOME_SERVER_VERSION`, `POCKET_HOME_WEB_VERSION` in `.env`; the two images are released apart |
 | Data | `${DATA_ROOT}/pocket-home/mosquitto/{config,data}` (generated `passwd` and `acl`, `certs/`, `mosquitto.db`), `${DATA_ROOT}/pocket-home/mqtt-ca` (the broker's CA and its key), `${DATA_ROOT}/pocket-home/postgres` (PostgreSQL data directory) |
 
-| Service | Image | Role |
+| Container | Image | Role |
 |---|---|---|
 | `pocket-home-mosquitto` | `eclipse-mosquitto` | MQTT broker, ports 1883 and 8883 (TLS) published for the gateway. Config in [`mosquitto.conf`](mosquitto.conf), mounted read-only. |
 | `pocket-home-web` | `home-web` | nginx: serves the web app, proxies `/api`, `/docs`, `/health` to the ingestor. The only published HTTP port. |
@@ -90,7 +90,7 @@ prefix changed in `.env` and a broker restart.
    asks the database and the broker connection.
 5. Connect the gateway (next section) and open the web app.
 
-Test the broker from the Mac (needs `brew install mosquitto` for the clients); the ACL lets
+Test the broker from the home server (needs `brew install mosquitto` for the clients); the ACL lets
 the ingestor user read the gateway's notifications and online status:
 
 ```sh
@@ -113,11 +113,11 @@ curl -H "Authorization: Bearer $POCKET_HOME_API_TOKEN" "http://localhost:$POCKET
 ## Shelly BLU Gateway
 
 Use pocket-home's `provision-gateway` command (ingestor README, "Set up the gateway") with
-`mqtt.server: <mac-name>.local:1883` (or the Mac's LAN IP if the gateway can't resolve
+`mqtt.server: <home-server-name>.local:1883` (or the home server's LAN IP if the gateway can't resolve
 `.local`) and the gateway user; the password comes from
 `POCKET_HOME_MQTT_GATEWAY_PASSWORD`. The gateway stays on plain TCP (1883) until it is
 switched to TLS and checked on the real hardware (smotastic/pocket-home#42); then it uses
-`mqtt.server: <mac-name>.local:8883` and `mqtt.tls.ca` with a copy of
+`mqtt.server: <home-server-name>.local:8883` and `mqtt.tls.ca` with a copy of
 `${DATA_ROOT}/pocket-home/mqtt-ca/ca.crt`.
 
 ## TLS
@@ -128,7 +128,7 @@ against the CA (`MQTT_TLS_CA_FILE`); it logs `MQTT over TLS` at the start. Clien
 the same users and ACL; there are no client certificates.
 
 [`scripts/pocket-home-mqtt-certs.sh`](../../scripts/pocket-home-mqtt-certs.sh) creates both on
-the Mac with `openssl`:
+the home server with `openssl`:
 
 | File | Where | Mounted |
 |---|---|---|
@@ -136,7 +136,7 @@ the Mac with `openssl`:
 | Broker key and certificate (825 days), CA certificate | `${DATA_ROOT}/pocket-home/mosquitto/config/certs/` | broker; the CA certificate also into the ingestor |
 
 The broker certificate names `pocket-home-mosquitto` (the ingestor), `localhost`, and the
-Mac's `.local` name and LAN address at the time it is issued (the gateway). The broker
+home server's `.local` name and LAN address at the time it is issued (the gateway). The broker
 refuses to start without the files.
 
 ```sh
@@ -145,15 +145,15 @@ scripts/pocket-home-mqtt-certs.sh renew [name...]  # new broker certificate, sam
 docker compose up -d --force-recreate pocket-home-mosquitto
 ```
 
-Renew before the broker certificate expires, and when the Mac's LAN address or name changes.
+Renew before the broker certificate expires, and when the home server's LAN address or name changes.
 The CA stays; clients that trust it need no change. Closing the plain listener is for after
 the gateway is on TLS (smotastic/pocket-home#42).
 
 ## Remote access
 
-The tailnet reaches the web app at `https://home.<tailnet>.ts.net` through the sidecar
+The tailnet reaches the web app at `https://home.<tailnet>.ts.net` through the tailnet node
 `tailscale-home` (see [`../tailscale/README.md`](../tailscale/README.md)); nothing else of
-pocket-home is in the tailnet beyond the Mac's LAN ports (see Hardening there). Signing in
+pocket-home is in the tailnet beyond the home server's LAN ports (see Hardening there). Signing in
 works on both: `API_COOKIE_SECURE` stays `false` because the LAN port is plain HTTP, and the
 cookie is still `HttpOnly` and `SameSite=Strict`.
 
@@ -208,7 +208,7 @@ alerts (see [`../observability/README.md`](../observability/README.md#grafana-ma
 
 ## Backup
 
-`scripts/backup.sh` stops the broker, the ingestor and Postgres during the snapshot, so
+`scripts/backup.sh` stops the broker, the ingestor and Postgres during the backup, so
 `mosquitto.db` is flushed and the Postgres data directory is consistent.
 
 ## Debugging

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Back up DATA_ROOT with restic. Gitea, its runner, the Postgres-backed stacks
-# (bookmarks, Docmost, Pocket Galaxy, pocket-home, pocket-learning, pocket-coach) and pocket-home's MQTT broker are
-# stopped while the snapshot is taken, so the SQLite
+# (bookmarks, Docmost, Pocket Galaxy, pocket-home, pocket-learning, pocket-coach, pocket-lens) and
+# pocket-home's MQTT broker are stopped during the backup, so the SQLite
 # database matches the git repositories and the Postgres data directories are
 # consistent with the files next to them.
 set -euo pipefail
@@ -18,7 +18,7 @@ export DOCKER_CONTEXT=colima-pocket-cloud
 export RESTIC_REPOSITORY="${RESTIC_REPOSITORY:-}"
 export RESTIC_PASSWORD_FILE="${RESTIC_PASSWORD_FILE:-$HOME/.config/pocket-cloud/restic-password}"
 
-# Stopped for the snapshot and started again afterwards, in this order.
+# Stopped for the backup and started again afterwards, in this order.
 SERVICES=(gitea-runner gitea bookmarks-server bookmarks-postgres docmost docmost-postgres
   pocket-galaxy-server pocket-galaxy-postgres pocket-home-ingestor pocket-home-postgres
   pocket-home-mosquitto pocket-learning-server pocket-learning-postgres pocket-coach-server
@@ -30,7 +30,7 @@ EXCLUDES=(
   "$DATA_ROOT/observability/loki"
   # pocket-comms' checkout and builds; no state, rebuilt by scripts/install-comms.sh.
   "$DATA_ROOT/pocket-comms"
-  # pocket-lens: previews and thumbnails are rebuilt from the originals; the host builds from git.
+  # pocket-lens: previews and thumbnails are rebuilt from the originals; the native part builds from git.
   "$DATA_ROOT/pocket-lens/library/cache"
   "$DATA_ROOT/pocket-lens/host"
 )

@@ -4,8 +4,8 @@ Shared metrics and logs stack: Prometheus receives metrics from every service ov
 OTLP and scrapes per-container CPU and memory from cAdvisor and Gitea's own
 metrics. Loki stores logs: Alloy tails the output of every container, and services
 can also push logs over OTLP. Grafana shows both. There are no traces (no Tempo).
-Alertmanager sends Prometheus alerts to Discord; so far they watch the Colima VM's
-disks and the Mac's own disk (see [Alerts](#alerts)).
+Alertmanager sends Prometheus alerts to Discord; so far they watch the pocket-cloud VM's
+disks and the home server's own disk (see [Alerts](#alerts)).
 
 | | |
 |---|---|
@@ -61,8 +61,8 @@ show up without changes as long as their containers follow that naming.
 
 ## Container metrics (cAdvisor)
 
-cAdvisor runs privileged with read-only mounts of the Colima VM's `/`, `/sys` and
-`/var/lib/docker`, so it sees the VM (8 GiB), not the Mac. Prometheus scrapes it at
+cAdvisor runs privileged with read-only mounts of the pocket-cloud VM's `/`, `/sys` and
+`/var/lib/docker`, so it sees the VM (8 GiB), not the home server. Prometheus scrapes it at
 `cadvisor:8080` (not published). Only CPU, memory and OOM metrics are collected, and
 the only container label kept is `com.docker.compose.service`, to keep cardinality low.
 Memory panels use `container_memory_working_set_bytes`, the same number `docker stats`
@@ -89,8 +89,8 @@ different tokens: recreate both
 
 ## Sending metrics from a service
 
-A service in this compose project reaches Prometheus by service name. In its
-`stacks/<service>/compose.yaml`:
+A service in this compose project reaches Prometheus by its compose service name. In its
+`stacks/<stack>/compose.yaml`:
 
 ```yaml
     environment:
@@ -114,7 +114,7 @@ the restic backup; Grafana's DB is backed up.
 
 ## Logs (Loki and Alloy)
 
-[`config.alloy`](config.alloy) discovers every container in the Colima VM through the
+[`config.alloy`](config.alloy) discovers every container in the pocket-cloud VM through the
 Docker socket (mounted read-only) and pushes its stdout and stderr to Loki. New stacks
 are picked up without changes. Each stream has two labels:
 
@@ -129,7 +129,7 @@ volume. Grafana adds `detected_level` from the log line where it can.
 
 [`loki.yaml`](loki.yaml) runs Loki as a single binary with its index and chunks on the
 filesystem. Retention is 30 days, enforced by the compactor; there is no size limit.
-Loki is not published on the Mac, it has no authentication.
+Loki is not published on the home server, it has no authentication.
 
 ### Sending logs from a service
 
@@ -186,17 +186,17 @@ keeps firing is repeated every 12 h.
 
 | Alert | Fires when |
 |---|---|
-| `VmDiskFilling` (warning) | a Colima VM disk (`/` or `/var/lib/docker`) is over 80 % full for 10 min |
+| `VmDiskFilling` (warning) | a pocket-cloud VM disk (`/` or `/var/lib/docker`) is over 80 % full for 10 min |
 | `VmDiskAlmostFull` (critical) | the same disk is over 90 % full for 5 min; replaces the warning |
 | `VmDiskFillingFast` (warning) | `/var/lib/docker` is over 60 % full and, at the rate of the last 30 min, full within 2 h, for 10 min |
-| `MacDiskFilling` (warning) | the Mac's disk that holds `${DATA_ROOT}` is over 80 % full for 10 min |
+| `MacDiskFilling` (warning) | the home server's disk that holds `${DATA_ROOT}` is over 80 % full for 10 min |
 | `MacDiskAlmostFull` (critical) | the same disk is over 90 % full for 5 min; replaces the warning |
-| `MacDiskMetricsMissing` (warning) | no disk metrics from the Mac for 10 min |
+| `MacDiskMetricsMissing` (warning) | no disk metrics from the home server for 10 min |
 | `ScrapeTargetDown` (warning) | node-exporter, cAdvisor or Alertmanager can't be scraped for 5 min |
 
 The VM's disk numbers come from node-exporter, which reads the VM's filesystems through a
 read-only mount of its `/`. `/var/lib/docker` is the VM's data disk with images,
-containers and build cache; the build cache is pruned from the Mac, see
+containers and build cache; the build cache is pruned from the home server, see
 [Build cache](../../README.md#build-cache). They count ext4's reserved blocks as used, so they read a
 few percent higher than `df`.
 
@@ -212,9 +212,9 @@ webhook, read from the compose secret. That file replaces Grafana's whole notifi
 tree; rules and contact points can't be edited in the UI. After a change,
 `docker compose up -d --force-recreate grafana`. They are under *Alerting* → *Alert rules*.
 
-### The Mac's disk
+### The home server's disk
 
-`${DATA_ROOT}` is on the Mac, not in the VM. Inside the VM it is only the virtiofs mount,
+`${DATA_ROOT}` is on the home server, not in the VM. Inside the VM it is only the virtiofs mount,
 which reports a meaningless size (about 254 TB), so node-exporter can't watch it. Instead
 the launchd agent `dev.pocket-cloud.disk-metrics` runs
 [`scripts/disk-metrics.sh`](../../scripts/disk-metrics.sh) every minute: it reads
@@ -228,7 +228,7 @@ with the job `mac-disk` and the label `mountpoint` (`/System/Volumes/Data`):
 
 Used is `1 - avail / size`, which also counts the other volumes (system, snapshots), so it
 reads a little higher than `df`'s *Capacity*. A push instead of a native node-exporter keeps
-the Mac free of another listening port and binary to pin; the price is that a stopped agent
+the home server free of another listening port and binary to pin; the price is that a stopped agent
 looks like no data, hence `MacDiskMetricsMissing`.
 
 ```sh
@@ -282,11 +282,11 @@ Use `amtool check-config` from the `prom/alertmanager` image the same way for
 
 ## Access
 
-Grafana, Prometheus and Alertmanager are published on all interfaces of the Mac, so
+Grafana, Prometheus and Alertmanager are published on all interfaces of the home server, so
 any device on the LAN can reach them. Nothing is reachable from outside because the
 router forwards no ports. The Prometheus and Alertmanager UIs and APIs have no
 authentication (anyone on the LAN could silence an alert); revisit this before
-exposing the Mac via Tailscale.
+putting the home server's ports on the tailnet.
 
 ## Debugging
 

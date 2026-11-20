@@ -44,7 +44,7 @@ and issue counts, no content). Changing the token needs both containers recreate
 ## SSH access
 
 Add a key under *Settings → SSH / GPG Keys*, then add to `~/.ssh/config`
-(on other devices, use the Mac's hostname instead of `localhost`):
+(on other devices, use the home server's hostname instead of `localhost`):
 
 ```text
 Host gitea
@@ -111,6 +111,6 @@ token under *Settings → Applications* with only the *package: read* scope, the
 docker --context colima-pocket-cloud login localhost:3000 -u <user>   # paste the token
 ```
 
-The Docker client on the Mac stores the credentials in `~/.docker/config.json`
+The Docker client on the home server stores the credentials in `~/.docker/config.json`
 (base64, i.e. plain text) unless a credential helper such as `osxkeychain` is set
 as `credsStore`. They are never in this repo. Packages show up under the owner's *Packages* tab.

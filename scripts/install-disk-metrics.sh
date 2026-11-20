@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Run scripts/disk-metrics.sh every minute via a launchd agent, so Prometheus
-# knows how full the Mac's disk is.
+# knows how full the home server's disk is.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

@@ -8,12 +8,12 @@ container registry.
 
 | | |
 |---|---|
-| Web app | https://coach.\<tailnet\>.ts.net (tailnet, HTTPS), http://\<mac-name\>.local:3007 (LAN, `POCKET_COACH_HTTP_PORT`) |
+| Web app | https://coach.\<tailnet\>.ts.net (tailnet, HTTPS), http://\<home-server-name\>.local:3007 (LAN, `POCKET_COACH_HTTP_PORT`) |
 | API docs | https://coach.\<tailnet\>.ts.net/docs |
 | Version | `POCKET_COACH_VERSION` in `.env`, the image tag of both images |
 | Data | `${DATA_ROOT}/pocket-coach/postgres` (PostgreSQL), `${DATA_ROOT}/pocket-coach/files` (Garmin's activity files) |
 
-| Service | Image | Role |
+| Container | Image | Role |
 |---|---|---|
 | `pocket-coach-web` | `pocket-coach-web` | nginx: the web app (an installable PWA that reloads itself onto a new version), proxies `/api`, `/docs`, `/health`. The only published port. |
 | `pocket-coach-server` | `pocket-coach-server` | API, Garmin sync and the coach's daily jobs, internal only. Calls the model with the owner's Pi login and the [whisper](../whisper/README.md) stack for voice messages. |
@@ -40,7 +40,7 @@ The image names carry the `pocket-` prefix because pocket-learning already owns 
    ```
 
 4. `docker compose up -d pocket-coach-web` from the repo root (pulls in its dependencies).
-5. For HTTPS over the tailnet, start its Tailscale node `tailscale-coach`
+5. For HTTPS over the tailnet, start its tailnet node `tailscale-coach`
    (see [`../tailscale/README.md`](../tailscale/README.md#first-start)).
 6. Open the app and go through the setup: profile, races, and the Garmin key.
 

@@ -1,6 +1,6 @@
-# pocket-lens on the host
+# pocket-lens' native part
 
-The VM half is [`stacks/pocket-lens`](../../stacks/pocket-lens/README.md): its server runs every
+The stack is [`stacks/pocket-lens`](../../stacks/pocket-lens/README.md): its server runs every
 import (nightly at 03:00, **Import now**, phone uploads) and is the library's only writer. Two
 parts of pocket-lens run natively, installed by [`scripts/install-lens.sh`](../../scripts/install-lens.sh)
 from the release `lens-v$POCKET_LENS_VERSION` under `$DATA_ROOT/pocket-lens/host`:
@@ -19,7 +19,7 @@ Lens 0.4 and earlier also ran `dev.pocket-cloud.lens-run` and `dev.pocket-cloud.
 
 The model (MobileCLIP2-B, about 1.5 GB while it runs) uses the Apple GPU through PyTorch MPS.
 Docker on macOS has no access to the GPU, and holding the model in the VM would cost its memory all
-day. The camera's Wireless Transmitter Utility writes into the library's `inbox/` on the host.
+day. The camera's Wireless Transmitter Utility writes into the library's `inbox/` on the home server.
 
 ## Use
 
@@ -33,5 +33,5 @@ pocket-lens import "/Volumes/NIKON Z6II"   # a card: copy into the inbox and imp
 Needs `node`, `pnpm`, `uv` (Homebrew) and a desktop session. The first request downloads the model
 weights (about 400 MB) into the Hugging Face cache.
 
-Deploy the VM half first, then run `install-lens.sh`: the new server no longer writes the old
+Deploy the stack first, then run `install-lens.sh`: the new server no longer writes the old
 uploads folder, so nothing lands there after the script has emptied it.

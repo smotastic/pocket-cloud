@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Run scripts/prune-build-cache.sh every 15 minutes via a launchd agent, so CI
-# builds can't fill the Colima VM's data disk with BuildKit cache.
+# builds can't fill the pocket-cloud VM's data disk with BuildKit cache.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

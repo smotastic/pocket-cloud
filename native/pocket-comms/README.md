@@ -1,26 +1,26 @@
 # pocket-comms
 
 [pocket-comms](https://github.com/smotastic/pocket-comms) is the phone web app that reads and drives
-the Herdr coding agents. Unlike every other service here it is **not a container**: it runs
-natively on the Mac under the launchd agent `dev.pocket-cloud.comms`, installed by
-[`scripts/install-comms.sh`](../../scripts/install-comms.sh), and the Mac's own Tailscale node
+the Herdr coding agents. Unlike the stacks here it is **not a container**: it is a native part,
+running directly on the home server under the launchd agent `dev.pocket-cloud.comms`, installed by
+[`scripts/install-comms.sh`](../../scripts/install-comms.sh), and the home server's own Tailscale
 serves it over HTTPS.
 
 ## Why native
 
-pocket-comms needs things that exist only on the host, in the user's login session:
+pocket-comms needs things that exist only on the home server, in the user's login session:
 
 - **Herdr's Unix socket**, `~/.config/herdr/herdr.sock`. A socket doesn't work across the Colima
-  virtiofs mount: the VM sees the file but can't connect to the host process.
-- **The Claude and Pi session files** under the home folder, read live, at the paths the host's
-  agents write them.
+  virtiofs mount: the pocket-cloud VM sees the file but can't connect to the process outside it.
+- **The Claude and Pi session files** under the home folder, read live, at the paths the coding
+  agents on the home server write them.
 
-### Why not a sidecar in `stacks/tailscale`
+### Why not a tailnet node in `stacks/tailscale`
 
-The obvious alternative, a `tailscale-comms` sidecar like the other services', was rejected:
+The obvious alternative, a `tailscale-comms` tailnet node like the stacks', was rejected:
 
-1. pocket-comms listens on `127.0.0.1` only (hard-coded). From inside the Colima VM, `127.0.0.1`
-   is the VM, so a sidecar can't reach the server.
+1. pocket-comms listens on `127.0.0.1` only (hard-coded). From inside the pocket-cloud VM,
+   `127.0.0.1` is the VM, so a tailnet node there can't reach the server.
 2. Making the server listen wider so the VM can reach it would be unsafe. Its only authentication is
    the `Tailscale-User-Login` header, which can be trusted only when `tailscale serve` sets it.
    Anyone on the LAN (and, with the default tailnet policy, the tailnet) could then call the server
@@ -43,11 +43,11 @@ In `.env`:
 | `COMMS_GITEA_URL` | Optional. The Gitea to read, default `http://localhost:3000` |
 | `COMMS_GITEA_HOSTS` | Optional. Further host names of that Gitea in git remotes (SSH aliases), comma-separated, default `gitea` |
 | `COMMS_BRAINSTORM_PROVIDER`, `COMMS_BRAINSTORM_MODEL` | Optional. The brainstorm chat's model, such as `openai` and `gpt-6-luna`; without both the chat says it is not set up |
-| `COMMS_BRAINSTORM_API_KEY` | Optional. An API key for that provider; without it the server uses the Mac user's Pi login (`pi`, then `/login`) |
+| `COMMS_BRAINSTORM_API_KEY` | Optional. An API key for that provider; without it the server uses the home server user's Pi login (`pi`, then `/login`) |
 | `COMMS_BRAINSTORM_THINKING` | Optional. `off` (default) to `max` |
 | `COMMS_STATE_DIR` | Optional. Where the brainstorm chat is kept, default `~/.pocket-comms` |
 | `COMMS_BRAINSTORM_PI_AUTH_FILE` | Optional. Pi's credential file, default `~/.pi/agent/auth.json` |
-| `COMMS_SPEECH_URL`, `COMMS_SPEECH_MODEL` | Optional. The speech-to-text service for voice messages in the brainstorm chat, such as `http://localhost:4430/v1` and `Systran/faster-whisper-small` ([stacks/whisper](../../stacks/whisper/README.md)); without both there is no Record voice |
+| `COMMS_SPEECH_URL`, `COMMS_SPEECH_MODEL` | Optional. The speech-to-text stack for voice messages in the brainstorm chat, such as `http://localhost:4430/v1` and `Systran/faster-whisper-small` ([stacks/whisper](../../stacks/whisper/README.md)); without both there is no Record voice |
 
 Requires Node.js 26+ and pnpm 11+ (Homebrew). Then:
 
@@ -63,16 +63,16 @@ The values are written into the agent's plist, so after changing `.env` run `ins
 The script never changes Tailscale's configuration. Once:
 
 ```sh
-sudo tailscale serve --bg 4410      # https://<mac>.<tailnet>.ts.net/ -> http://127.0.0.1:4410
+sudo tailscale serve --bg 4410      # https://<home-server-name>.<tailnet>.ts.net/ -> http://127.0.0.1:4410
 tailscale serve status
 ```
 
 `--bg` keeps the config in tailscaled's state across reboots; while the server is down it answers
-502. The Mac's tailscaled runs as root, so `serve` needs `sudo` (or once
+502. The home server's tailscaled runs as root, so `serve` needs `sudo` (or once
 `sudo tailscale set --operator=$USER`). **Never use Funnel** for this: it would put the agents on the
 internet.
 
-Under the [hardened tailnet policy](../../stacks/tailscale/README.md#hardening), the Mac takes only
+Under the [hardened tailnet policy](../../stacks/tailscale/README.md#hardening), the home server takes only
 SSH; pocket-comms needs `tcp:443` there too, for the owner only. On the iPhone, open the address in
 Safari, then **Share > Add to Home Screen**.
 

@@ -11,7 +11,7 @@ Its images are built by Gitea Actions and pulled from Gitea's container registry
 | Version | `BOOKMARKS_VERSION` in `.env`, the image tag of both images |
 | Data | `${DATA_ROOT}/bookmarks/postgres` (PostgreSQL data directory) |
 
-| Service | Image | Role |
+| Container | Image | Role |
 |---|---|---|
 | `bookmarks-web` | `bookmarks-web` | nginx: serves the web app, proxies `/api`, `/docs`, `/health` to the server. The only published port. |
 | `bookmarks-server` | `bookmarks-server` | REST API on port 3000, internal only |
@@ -53,16 +53,16 @@ and `deployment_environment_name`.
 
 ## Backup
 
-`scripts/backup.sh` stops `bookmarks-server` and `bookmarks-postgres` while the
-snapshot is taken, so the data directory is consistent.
+`scripts/backup.sh` stops `bookmarks-server` and `bookmarks-postgres` during the
+backup, so the data directory is consistent.
 The web app is unavailable for those few seconds.
 
 ## Access
 
 The app has **no authentication**. Only `bookmarks-web` is published, on all
-interfaces of the Mac, so any device on the LAN can read and change bookmarks.
+interfaces of the home server, so any device on the LAN can read and change bookmarks.
 Nothing is reachable from outside because the router forwards no ports. Revisit
-before exposing the Mac via Tailscale.
+before putting the home server's ports on the tailnet.
 
 ## Debugging
 

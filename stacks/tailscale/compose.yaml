@@ -1,6 +1,6 @@
-# One Tailscale node per exposed service. The tailnet reaches only what is listed here,
-# each service over HTTPS on its own name (https://<node>.<tailnet>.ts.net).
-# Adding a service: a serve/<node>.json and a service block below, see README.md.
+# One tailnet node per stack on the tailnet. The tailnet reaches only what is listed here,
+# each over HTTPS on its own name (https://<node>.<tailnet>.ts.net).
+# Adding a node: a serve/<node>.json and a service block below, see README.md.
 x-tailscale: &tailscale
   image: tailscale/tailscale:v1.104.1
   restart: unless-stopped
